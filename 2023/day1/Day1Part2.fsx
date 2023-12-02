@@ -55,10 +55,6 @@ let testCases =
         "fourtwo15nine1", 41
     |]
 
-let readDay1Input() = 
-    File.ReadAllLines("Day1.txt")
-
-let log x = printfn "%A" x; x
 type Position =
     {
         Index: int
@@ -66,7 +62,7 @@ type Position =
         Digit: int
     }
 
-type Pipeline =
+type Part2Result =
     {
         Input: string
         Positions: Position[]
@@ -76,7 +72,7 @@ type Pipeline =
     }
 
 let part2Answer = 
-    readDay1Input()
+    File.ReadAllLines(Path.Combine(__SOURCE_DIRECTORY__, "Day1.txt"))
     |> Seq.map (fun x ->
         let positions = 
             digitWords
@@ -89,19 +85,16 @@ let part2Answer =
             |> Array.filter (fun (index, _) -> index >= 0)
             |> Array.map (fun (index, (word, digit)) -> { Index = index; Word = word; Digit = digit })
 
-        let minPosition = positions |> Array.minBy (fun x -> x.Index)
-        let maxPosition = positions |> Array.maxBy (fun x -> x.Index)
-        let min = minPosition.Digit
-        let max = maxPosition.Digit
-        let digits = $"{min}{max}"
+        let min = positions |> Array.minBy (fun x -> x.Index)
+        let max = positions |> Array.maxBy (fun x -> x.Index)
+        let digits = $"{min.Digit}{max.Digit}"
 
         { Input = x
           Positions = positions
-          MinPosition = minPosition
-          MaxPosition = maxPosition
+          MinPosition = min
+          MaxPosition = max
           Digits = digits }
     )
-    |> Seq.map log
     |> Seq.sumBy (fun x -> int x.Digits)
 
 // 53846 -- wrong

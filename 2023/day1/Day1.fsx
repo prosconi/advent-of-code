@@ -24,20 +24,12 @@
 open System
 open System.IO
 
-let parseDigits line =
+File.ReadAllLines(Path.Combine(__SOURCE_DIRECTORY__, "Day1.txt"))
+|> Seq.map (fun line ->
     let digits = line |> String.filter Char.IsDigit |> Seq.toArray
     let first, last = (digits |> Seq.head), (digits |> Seq.last)
     int $"{first}{last}"
-
-let sumByLines lines =
-    lines
-    |> Seq.map parseDigits
-    |> Seq.sum
-
-let readDay1Input() = 
-    File.ReadAllLines("Day1.txt")
-
-let day1Answer() = 
-    sumByLines (readDay1Input())
+)
+|> Seq.sum
 
 // 54634
