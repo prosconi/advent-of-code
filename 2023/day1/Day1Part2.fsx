@@ -76,14 +76,13 @@ let part2Answer =
     |> Seq.map (fun x ->
         let positions = 
             digitWords
-            |> Array.collect (fun word -> 
+            |> Array.collect (fun (word, digit) -> 
                 [|
-                    x.IndexOf(fst word), word
-                    x.LastIndexOf(fst word), word
+                    { Index = x.IndexOf(word); Word = word; Digit = digit }
+                    { Index = x.LastIndexOf(word); Word = word; Digit = digit }
                 |]
             )
-            |> Array.filter (fun (index, _) -> index >= 0)
-            |> Array.map (fun (index, (word, digit)) -> { Index = index; Word = word; Digit = digit })
+            |> Array.filter (fun x -> x.Index >= 0)
 
         let min = positions |> Array.minBy (fun x -> x.Index)
         let max = positions |> Array.maxBy (fun x -> x.Index)
