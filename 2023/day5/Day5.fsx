@@ -102,9 +102,22 @@ let readInputFile() =
 
 type ListItem =
     {
+        DestinationRangeStart: int64
         SourceRangeStart: int64
-        SourceRangeEnd: int64
         Length: int64
+    }
+
+// humidity-to-location map:
+type ParsedData =
+    {
+        SeedToSoil: ListItem list
+        SoilToFertilizer: ListItem list
+        FertilizerToWater: ListItem list
+        WaterToLight: ListItem list
+        LightToTemperature: ListItem list
+        TemperatureToHumidity: ListItem list
+        HumidityToLocation: ListItem list
+        Seeds: int64 list
     }
 
 let splitIntoTwo (line: string, delimiter: string) =
@@ -137,8 +150,8 @@ let (|Empty|_|) (s:string) =
 
 let (|List|_|) (s:string) =
     match parseList s with
-    | [ fromItem; toItem; length ] -> 
-        { SourceRangeStart = fromItem; SourceRangeEnd = toItem; Length = length }
+    | [ destination; source; length ] -> 
+        { DestinationRangeStart = destination; SourceRangeStart = source; Length = length }
         |> Some
     | _ -> 
         None
@@ -149,26 +162,60 @@ let (|Seeds|_|) (s:string) =
     | _ -> None
 
 let parseLines (lines: string seq) =
-    let data = Dictionary()
-    let mutable seeds = []
     let mutable key = ""
+    let mutable parsedData : ParsedData = 
+        { SeedToSoil = []
+          SoilToFertilizer = []
+          FertilizerToWater = []
+          WaterToLight = []
+          LightToTemperature = []
+          TemperatureToHumidity = []
+          Seeds = []
+          HumidityToLocation = [] }
+
     for line in lines do
         let line = line.Trim()
 
         match line with
         | Seeds s -> 
-            seeds <- s
+            parsedData <- { parsedData with Seeds = s }
         | Map (fromString, toString) -> 
             key <- $"{fromString}-to-{toString}"
         | Empty -> 
             ()
         | List items -> 
-            match data.ContainsKey key with
-            | true -> data[key] <- items :: data[key]
-            | false -> data.Add(key, [items])
+            match key with
+            | "seed-to-soil"            -> parsedData <- { parsedData with SeedToSoil = items :: parsedData.SeedToSoil }
+            | "soil-to-fertilizer"      -> parsedData <- { parsedData with SoilToFertilizer = items :: parsedData.SoilToFertilizer }
+            | "fertilizer-to-water"     -> parsedData <- { parsedData with FertilizerToWater = items :: parsedData.FertilizerToWater }
+            | "water-to-light"          -> parsedData <- { parsedData with WaterToLight = items :: parsedData.WaterToLight }
+            | "light-to-temperature"    -> parsedData <- { parsedData with LightToTemperature = items :: parsedData.LightToTemperature }
+            | "temperature-to-humidity" -> parsedData <- { parsedData with TemperatureToHumidity = items :: parsedData.TemperatureToHumidity }
+            | "humidity-to-location"    -> parsedData <- { parsedData with HumidityToLocation = items :: parsedData.HumidityToLocation }
+            | _ -> failwithf "Invalid key: %s" key
         | _ -> failwithf "Invalid line: %s" line
-    {| Data = data
-       Seeds = seeds |}
+    parsedData
+
+let traverseMaps (parsedData: ParsedData) key =
+    let rec lookup (list: ListItem list) (key: int64) =
+        list
+        |> Seq.tryFind (fun x -> key >= x.DestinationRangeStart && key <= x.DestinationRangeStart + x.Length)
+        |> Option.map (fun x -> key)
+        |> Option.defaultValue key
+
+    key
+    |> lookup parsedData.SeedToSoil
+    |> lookup parsedData.SoilToFertilizer
+    |> lookup parsedData.FertilizerToWater
+    |> lookup parsedData.WaterToLight
+    |> lookup parsedData.LightToTemperature
+    |> lookup parsedData.TemperatureToHumidity
+    |> lookup parsedData.HumidityToLocation
+    
+let go (parsedData: ParsedData) =
+    for seed in parsedData.Seeds do
+        traverseMaps parsedData seed
 
 readInputFile()
 |> parseLines
+|> go
