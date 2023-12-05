@@ -92,3 +92,83 @@
 // So, the lowest location number in this example is 35.
 
 // What is the lowest location number that corresponds to any of the initial seed numbers?
+
+open System
+open System.Collections.Generic
+open System.IO
+
+let readInputFile() =
+    File.ReadLines(Path.Combine(__SOURCE_DIRECTORY__, "Day5.txt"))
+
+type ListItem =
+    {
+        SourceRangeStart: int64
+        SourceRangeEnd: int64
+        Length: int64
+    }
+
+let splitIntoTwo (line: string, delimiter: string) =
+    let index = line.IndexOf(delimiter)
+    let left = line.Substring(0, index)
+    let right = line.Substring(index + delimiter.Length)
+    left, right
+
+let parseList (str: string) =
+    ' '
+    |> str.Split
+    |> Seq.filter (not << String.IsNullOrWhiteSpace)
+    |> Seq.map int64
+    |> Seq.toList
+
+let (|StartsWith|_|) (prefix:string) (s:string) =
+    if s.StartsWith(prefix)
+    then Some(s.Substring(prefix.Length))
+    else None
+
+let (|Map|_|) (s:string) =
+    if s.Contains "-to-" && s.EndsWith ":"
+    then Some(splitIntoTwo(s.Replace("map:", "").Trim(), "-to-"))
+    else None
+
+let (|Empty|_|) (s:string) =
+    if String.IsNullOrWhiteSpace s
+    then Some()
+    else None
+
+let (|List|_|) (s:string) =
+    match parseList s with
+    | [ fromItem; toItem; length ] -> 
+        { SourceRangeStart = fromItem; SourceRangeEnd = toItem; Length = length }
+        |> Some
+    | _ -> 
+        None
+
+let (|Seeds|_|) (s:string) =
+    match s with
+    | StartsWith "seeds:" rest -> Some(parseList rest)
+    | _ -> None
+
+let parseLines (lines: string seq) =
+    let data = Dictionary()
+    let mutable seeds = []
+    let mutable key = ""
+    for line in lines do
+        let line = line.Trim()
+
+        match line with
+        | Seeds s -> 
+            seeds <- s
+        | Map (fromString, toString) -> 
+            key <- $"{fromString}-to-{toString}"
+        | Empty -> 
+            ()
+        | List items -> 
+            match data.ContainsKey key with
+            | true -> data[key] <- items :: data[key]
+            | false -> data.Add(key, [items])
+        | _ -> failwithf "Invalid line: %s" line
+    {| Data = data
+       Seeds = seeds |}
+
+readInputFile()
+|> parseLines
