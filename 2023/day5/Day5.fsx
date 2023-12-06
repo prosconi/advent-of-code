@@ -24,6 +24,11 @@
 // 37 52 2
 // 39 0 15
 
+// Seed 79, soil 81, fertilizer 81, water 81, light 74, temperature 78, humidity 78, location 82.
+// Seed 14, soil 14, fertilizer 53, water 49, light 42, temperature 42, humidity 43, location 43.
+// Seed 55, soil 57, fertilizer 57, water 53, light 46, temperature 82, humidity 82, location 86.
+// Seed 13, soil 13, fertilizer 52, water 41, light 34, temperature 34, humidity 35, location 35.
+
 // fertilizer-to-water map:
 // 49 53 8
 // 0 11 42
@@ -48,17 +53,17 @@
 // 56 93 4
 // The almanac starts by listing which seeds need to be planted: seeds 79, 14, 55, and 13.
 
+// Rather than list every source number and its corresponding destination number one by one, the maps describe entire ranges of numbers that can be converted. Each line within a map contains three numbers: the destination range start, the source range start, and the range length.
 // The rest of the almanac contains a list of maps which describe how to convert numbers from a source category into numbers in a destination category. That is, the section that starts with seed-to-soil map: describes how to convert a seed number (the source) to a soil number (the destination). This lets the gardener and his team know which soil to use with which seeds, which water to use with which fertilizer, and so on.
 
-// Rather than list every source number and its corresponding destination number one by one, the maps describe entire ranges of numbers that can be converted. Each line within a map contains three numbers: the destination range start, the source range start, and the range length.
 
 // Consider again the example seed-to-soil map:
 
-// 50 98 2
-// 52 50 48
 // The first line has a destination range start of 50, a source range start of 98, and a range length of 2. This line means that the source range starts at 98 and contains two values: 98 and 99. The destination range is the same length, but it starts at 50, so its two values are 50 and 51. With this information, you know that seed number 98 corresponds to soil number 50 and that seed number 99 corresponds to soil number 51.
-
+// 50 98 2
 // The second line means that the source range starts at 50 and contains 48 values: 50, 51, ..., 96, 97. This corresponds to a destination range starting at 52 and also containing 48 values: 52, 53, ..., 98, 99. So, seed number 53 corresponds to soil number 55.
+// 52 50 48
+
 
 // Any source numbers that aren't mapped correspond to the same destination number. So, seed number 10 corresponds to soil number 10.
 
@@ -97,13 +102,16 @@ open System
 open System.Collections.Generic
 open System.IO
 
+let example() =
+    File.ReadLines(Path.Combine(__SOURCE_DIRECTORY__, "Example5.txt"))
+
 let readInputFile() =
     File.ReadLines(Path.Combine(__SOURCE_DIRECTORY__, "Day5.txt"))
 
 type ListItem =
     {
-        DestinationRangeStart: int64
         SourceRangeStart: int64
+        DestinationRangeStart: int64
         Length: int64
     }
 
@@ -185,25 +193,25 @@ let parseLines (lines: string seq) =
             ()
         | List items -> 
             match key with
-            | "seed-to-soil"            -> parsedData <- { parsedData with SeedToSoil = items :: parsedData.SeedToSoil }
-            | "soil-to-fertilizer"      -> parsedData <- { parsedData with SoilToFertilizer = items :: parsedData.SoilToFertilizer }
-            | "fertilizer-to-water"     -> parsedData <- { parsedData with FertilizerToWater = items :: parsedData.FertilizerToWater }
-            | "water-to-light"          -> parsedData <- { parsedData with WaterToLight = items :: parsedData.WaterToLight }
-            | "light-to-temperature"    -> parsedData <- { parsedData with LightToTemperature = items :: parsedData.LightToTemperature }
+            | "seed-to-soil"            -> parsedData <- { parsedData with SeedToSoil            = items :: parsedData.SeedToSoil }
+            | "soil-to-fertilizer"      -> parsedData <- { parsedData with SoilToFertilizer      = items :: parsedData.SoilToFertilizer }
+            | "fertilizer-to-water"     -> parsedData <- { parsedData with FertilizerToWater     = items :: parsedData.FertilizerToWater }
+            | "water-to-light"          -> parsedData <- { parsedData with WaterToLight          = items :: parsedData.WaterToLight }
+            | "light-to-temperature"    -> parsedData <- { parsedData with LightToTemperature    = items :: parsedData.LightToTemperature }
             | "temperature-to-humidity" -> parsedData <- { parsedData with TemperatureToHumidity = items :: parsedData.TemperatureToHumidity }
-            | "humidity-to-location"    -> parsedData <- { parsedData with HumidityToLocation = items :: parsedData.HumidityToLocation }
+            | "humidity-to-location"    -> parsedData <- { parsedData with HumidityToLocation    = items :: parsedData.HumidityToLocation }
             | _ -> failwithf "Invalid key: %s" key
         | _ -> failwithf "Invalid line: %s" line
     parsedData
 
-let traverseMaps (parsedData: ParsedData) key =
-    let rec lookup (list: ListItem list) (key: int64) =
-        list
-        |> Seq.tryFind (fun x -> key >= x.DestinationRangeStart && key <= x.DestinationRangeStart + x.Length)
-        |> Option.map (fun x -> key)
-        |> Option.defaultValue key
+let lookup (list: ListItem list) (key: int64) =
+    list
+    |> Seq.tryFind (fun x -> key >= x.SourceRangeStart && key < x.SourceRangeStart + x.Length)
+    |> Option.map (fun x -> key - (x.SourceRangeStart - x.DestinationRangeStart))
+    |> Option.defaultValue key
 
-    key
+let traverseMaps (parsedData: ParsedData) seed =
+    seed
     |> lookup parsedData.SeedToSoil
     |> lookup parsedData.SoilToFertilizer
     |> lookup parsedData.FertilizerToWater
@@ -213,9 +221,10 @@ let traverseMaps (parsedData: ParsedData) key =
     |> lookup parsedData.HumidityToLocation
     
 let go (parsedData: ParsedData) =
-    for seed in parsedData.Seeds do
-        traverseMaps parsedData seed
+    parsedData.Seeds
+    |> Seq.map (traverseMaps parsedData)
 
 readInputFile()
 |> parseLines
 |> go
+|> Seq.min
