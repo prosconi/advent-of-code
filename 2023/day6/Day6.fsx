@@ -40,3 +40,55 @@
 
 // Determine the number of ways you could beat the record in each race. What do you get if you multiply these numbers together?
 
+open System
+open System.IO
+
+let example() =
+    File.ReadLines(Path.Combine(__SOURCE_DIRECTORY__, "Example6.txt"))
+
+let readInputFile() =
+    File.ReadLines(Path.Combine(__SOURCE_DIRECTORY__, "Day6.txt"))
+
+let splitIntoTwo (delimiter: string) (line: string) =
+    let index = line.IndexOf(delimiter)
+    let left = line.Substring(0, index)
+    let right = line.Substring(index + delimiter.Length)
+    left, right
+
+let splitAndParse (str: string) =
+    str.Split(' ')
+    |> Array.filter (not << String.IsNullOrWhiteSpace)
+    |> Array.map (fun x -> x.Trim())
+    |> Array.map int
+
+let getWinners (totalTime, distance) =
+    [|
+        for timeCharging = 0 to totalTime do
+            let speed = totalTime - (totalTime - timeCharging)
+            let timeMoving = totalTime - timeCharging
+            let distanceTraveled = speed * timeMoving
+            if distanceTraveled > distance then
+                yield {| 
+                        timeCharging = timeCharging
+                        speed = speed
+                        timeMoving = timeMoving
+                        distanceTraveled = distanceTraveled
+                      |}
+    |]
+
+let parseLines (lines: string[]) =
+    let _, times = lines |> Array.find (fun x -> x.StartsWith("Time:")) |> splitIntoTwo ":"
+    let _, distances = lines |> Array.find (fun x -> x.StartsWith("Distance:")) |> splitIntoTwo ":"
+    let times = times |> splitAndParse
+    let distances = distances |> splitAndParse
+    Array.zip times distances
+
+let go() =
+    readInputFile()
+    |> Seq.toArray
+    |> parseLines
+    |> Array.map getWinners
+    |> Array.map (fun x -> x.Length)
+    |> Array.reduce (*)
+
+go()
