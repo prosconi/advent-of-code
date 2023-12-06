@@ -165,7 +165,7 @@ let refreshTable() =
         .Start(fun ctx ->
             while true do
                 table.Rows.Clear()
-                for kvp in tableDict do
+                for kvp in tableDict |> Seq.sortBy (fun x -> x.Key) do
                     table.AddRow(string kvp.Key, String.Format("{0:P2}", kvp.Value))
                     |> ignore
                 ctx.Refresh()
@@ -180,6 +180,8 @@ let go (parsedData: ParsedData) =
             |> Seq.mapi (fun i x -> 
                 if i % 100_000 = 0 then
                     tableDict[seedIndex] <- float i / (float s.Length)
+                elif int64 i = s.Length then
+                    tableDict[seedIndex] <- 1.0
                 x
             )
             |> Seq.map (traverseMaps parsedData)
