@@ -81,28 +81,45 @@ let parse lines =
 let repeat items = 
     seq { while true do yield! items }
 
-let traverse (map: Map) =
+let traverse (map: Map) startingPosition =
     seq {
-        let positions = map.maps.Keys |> Seq.filter isStartingPosition |> Seq.toArray
-        let mutable i = 0L
-        yield (i, positions)
+        let mutable position = startingPosition
+        let mutable i = 0
         while true do
             for direction in repeat map.directions do
-                i <- i + 1L
- 
-                for n = 0 to positions.Length - 1 do
-                    match direction with
-                    | 'L' -> positions[n] <- fst (map.maps[positions[n]])
-                    | 'R' -> positions[n] <- snd (map.maps[positions[n]])
-                    | _ -> failwith "Invalid direction"
+                match direction with
+                | 'L' -> position <- fst (map.maps.[position])
+                | 'R' -> position <- snd (map.maps.[position])
+                | _ -> failwith "Invalid direction"
 
-                if i % 1000000L = 0L then 
-                    printfn "%d: %A" i positions
-                yield (i, positions)
+                i <- i + 1
+                yield (i, position)
     }
-    |> Seq.find (fun (_, positions) -> positions |> Seq.forall isEndingPosition)
+    |> Seq.find (fun (_, position) -> isEndingPosition position)
 
-readInputFile()
-|> parse
-|> traverse
-// |> Seq.toArray
+let primeFactors n =
+    let rec primeFactors' n x a = 
+        if x = n then
+            x::a
+        elif n % x = 0 then
+            primeFactors' (n / x) x (x::a)
+        else
+            primeFactors' n (x + 1) a
+    primeFactors' n 2 []
+
+let map = 
+    readInputFile()
+    |> parse
+
+let startingPositions = 
+    map.maps.Keys
+    |> Seq.filter isStartingPosition
+    |> Seq.toArray
+
+startingPositions
+|> Array.map (traverse map)
+|> Array.map fst
+|> Seq.collect (primeFactors)
+|> Seq.distinct
+|> Seq.map (int64)
+|> Seq.reduce (*)
