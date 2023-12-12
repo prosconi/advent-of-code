@@ -155,6 +155,16 @@ type Tile =
     | SouthWest
     | SouthEast
     | Start
+    member x.ToChar() =
+        match x with
+        | Ground -> '.'
+        | NorthSouth -> '|'
+        | EastWest -> '-'
+        | NorthEast -> 'L'
+        | NorthWest -> 'J'
+        | SouthWest -> '7'
+        | SouthEast -> 'F'
+        | Start -> 'S'
     
 let charToTile c =
     match c with
@@ -184,9 +194,59 @@ let findStartingPosition tiles =
     |> Seq.choose id
     |> Seq.head
 
-let solve (tiles: Tile[][]) =
+let replaceStartingPosition tiles =
+    let (x, y), _ = findStartingPosition tiles
+    let height = tiles.Length
+    let width = tiles.[0].Length
+    let peak (x, y) =
+        if x >= 0 && y >= 0 && x < width && y < height
+        then Some(tiles.[y].[x])
+        else None
+
+    let isNorth = 
+        match peak (x, y - 1) with
+        | Some NorthSouth
+        | Some SouthEast
+        | Some SouthWest -> true
+        | _ -> false
+
+    let isSouth =
+        match peak (x, y + 1) with
+        | Some NorthSouth
+        | Some NorthEast
+        | Some NorthWest -> true
+        | _ -> false
+
+    let isWest =
+        match peak (x - 1, y) with
+        | Some EastWest
+        | Some NorthEast
+        | Some SouthEast -> true
+        | _ -> false
+
+    let isEast =
+        match peak (x + 1, y) with
+        | Some EastWest
+        | Some NorthWest
+        | Some SouthWest -> true
+        | _ -> false
+
+    let newTile = 
+        match isEast, isWest, isNorth, isSouth with
+        | true, true, _, _ -> EastWest
+        | _, _, true, true -> NorthSouth
+        | true, _, true, _ -> NorthEast
+        | _, true, true, _ -> NorthWest
+        | _, true, _, true -> SouthWest
+        | true, _, _, true -> SouthEast
+        | _ -> failwith "Invalid starting position"
+
+    tiles.[y].[x] <- newTile
+    x, y
+
+let solve startingPosition (tiles: Tile[][]) =
+    
     let solution = tiles |> Array.map (fun line -> line |> Array.map (fun _ -> Int32.MaxValue))
-    let startingPosition, _ = findStartingPosition tiles
     let height = tiles.Length
     let width = tiles.[0].Length
 
@@ -205,144 +265,57 @@ let solve (tiles: Tile[][]) =
             | None ->
                 ()
 
-        let (x, y) = position
+        // stop from recursing forever (we are at start position)
+        if position = startingPosition && previousPosition <> (-1, -1) then
+            ()
+        else
+            let (x, y) = position
+            solution.[y].[x] <- Math.Min(depth, solution.[y].[x])
 
-        solution.[y].[x] <- Math.Min(depth, solution.[y].[x])
-
-        match tiles.[y].[x] with
-        | Ground -> ()
-        | NorthSouth -> 
-            tif (x, y - 1)
-            tif (x, y + 1)
-        | EastWest -> 
-            tif (x - 1, y)
-            tif (x + 1, y)
-        | NorthEast ->
-            tif (x, y - 1)
-            tif (x + 1, y)
-        | NorthWest ->
-            tif (x - 1, y)
-            tif (x, y - 1)
-        | SouthWest ->
-            tif (x - 1, y)
-            tif (x, y + 1)
-        | SouthEast ->
-            tif (x, y + 1)
-            tif (x + 1, y)
-        | Start ->
-            if previousPosition = (-1, -1) then
-                match peak (x, y - 1) with
-                | Some NorthSouth
-                | Some SouthEast
-                | Some SouthWest -> tif (x, y - 1)
-                | _ -> ()
-
-                match peak (x, y + 1) with
-                | Some NorthSouth
-                | Some NorthEast
-                | Some NorthWest -> tif (x, y + 1)
-                | _ -> ()
-
-                match peak (x - 1, y) with
-                | Some EastWest
-                | Some NorthEast
-                | Some SouthEast -> tif (x - 1, y)
-                | _ -> ()
-
-                match peak (x + 1, y) with
-                | Some EastWest
-                | Some NorthWest
-                | Some SouthWest -> tif (x + 1, y)
-                | _ -> ()
+            match tiles.[y].[x] with
+            | Ground -> ()
+            | Start -> ()
+            | NorthSouth -> 
+                tif (x, y - 1)
+                tif (x, y + 1)
+            | EastWest -> 
+                tif (x - 1, y)
+                tif (x + 1, y)
+            | NorthEast ->
+                tif (x, y - 1)
+                tif (x + 1, y)
+            | NorthWest ->
+                tif (x - 1, y)
+                tif (x, y - 1)
+            | SouthWest ->
+                tif (x - 1, y)
+                tif (x, y + 1)
+            | SouthEast ->
+                tif (x, y + 1)
+                tif (x + 1, y)
 
     traverse startingPosition (-1, -1) 0
     solution
 
-let floodFill position value (solution: int[][]) =
-    let height = solution.Length
-    let width = solution.[0].Length
-    
-    let rec floodFill' (x, y) =
 
-        if solution[y][x] <> Int32.MaxValue then 
-            ()
-        else 
-            solution[y][x] <- value
+let tiles = readInputFile() |> parse
 
-            if x > 0 then floodFill' (x - 1, y)
-            if x < width - 1 then floodFill' (x + 1, y)
-            if y > 0 then floodFill' (x, y - 1)
-            if y < height - 1 then floodFill' (x, y + 1)
+let startingPosition = replaceStartingPosition tiles
 
-    floodFill' position
+tiles
 
-type Enclosed =
-    | Pipe
-    | Inside
-    | Outside
+let solution = solve startingPosition tiles
 
-let classify (x, y) (tiles: Tile[][]) (solution: int[][]) =
-    let height = solution.Length
-    let width = solution.[0].Length
-
-    let isOnBorder(x', y') = x' = 0 || y' = 0 || x' = width - 1 || y' = height - 1
-
-    if solution.[y].[x] <> Int32.MaxValue then Pipe
-    else 
-        if isOnBorder(x, y)
-        then Outside
-        else
-            let mutable trappedRight = false
-            let mutable xx = x
-            while xx < width do
-                if solution.[y].[xx] <> Int32.MaxValue then 
-                    trappedRight <- true
-                xx <- xx + 1
-
-            let mutable trappedLeft = false
-            let mutable xx = x
-            while xx >= 0 do
-                if solution.[y].[xx] <> Int32.MaxValue then
-                    trappedLeft <- true
-                xx <- xx - 1
-
-            let mutable trappedDown = false
-            let mutable yy = y
-            while yy < height do
-                if solution.[yy].[x] <> Int32.MaxValue then trappedDown <- true
-                yy <- yy + 1
-
-            let mutable trappedUp = false
-            let mutable yy = y
-            while yy >= 0 do
-                if solution.[yy].[x] <> Int32.MaxValue then trappedUp <- true
-                yy <- yy - 1
-
-            if trappedDown && trappedUp && trappedLeft && trappedRight
-            then Inside
-            else Outside
-
-let go (solution: int[][]) =
-    for y = 0 to solution.Length - 1 do
-        for x = 0 to solution.[0].Length - 1 do
-            match classify (x, y) solution with
-            | Pipe -> ()
-            | Inside -> floodFill (x, y) -1 solution
-            | Outside -> floodFill (x, y) -2 solution
-
-let solution = 
-    example4()
-    |> parse
-    |> solve
-    
-solution
-|> go
+let tryMax arr =
+    match arr with
+    | [||] -> None
+    | other -> Some(Array.max other)
 
 solution
-|> Array.map (fun line -> line |> Array.map (fun v -> if v = -1 then 'I' elif v = -2 then 'O' else ' ') |> Array.map string |> String.concat "")
-|> Array.iter (printfn "%s")
+|> Array.choose (fun line -> line |> Array.filter (fun x -> x <> Int32.MaxValue) |> tryMax)
+|> tryMax
 
-solution
-|> Array.collect (fun line -> line)
-|> Array.map (fun x -> if x = -1 then 1 else 0)
-|> Array.sum
+tiles
+|> Array.map (fun line -> line |> Array.map (fun x -> x.ToChar().ToString()))
+|> Array.iter (fun line -> line |> Array.iter (printf "%s"); printfn "")
+
