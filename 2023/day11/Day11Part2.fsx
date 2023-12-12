@@ -64,7 +64,6 @@ let getOffsetPosition expansionSize (eu: ExpandedUniverse) (x, y) =
         |> Seq.filter (fun yy -> y > yy)
         |> Seq.length
 
-    printfn "x: %d, y: %d, colOffset: %d, rowOffset: %d" x y colOffset rowOffset
     x + (colOffset * expansionSize), y + (rowOffset * expansionSize)
 
 let gatherGalaxies expansionSize (eu: ExpandedUniverse) =
@@ -87,19 +86,9 @@ let distance (x1, y1) (x2, y2) =
     abs (int64 x1 - int64 x2) + abs (int64 y1 - int64 y2)
 
 readInputFile()
-
-let eu =
-    example()
-    |> Seq.toArray
-    |> expandUniverse
-
-eu
-
-getOffsetPosition 1 eu (0, 4)
-
-
-eu
-|> gatherGalaxies 0
+|> Seq.toArray
+|> expandUniverse
+|> gatherGalaxies (1_000_000 - 1)
 |> permute
 |> Seq.toArray
 |> Array.map (fun (g1, g2) -> distance g1 g2)
