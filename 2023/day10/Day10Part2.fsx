@@ -116,6 +116,33 @@ let example2() =
         "..........."
     |]
 
+let example3() =
+    [|
+        ".F----7F7F7F7F-7...."
+        ".|F--7||||||||FJ...."
+        ".||.FJ||||||||L7...."
+        "FJL7L7LJLJ||LJ.L-7.."
+        "L--J.L7...LJS7F-7L7."
+        "....F-J..F7FJ|L7L7L7"
+        "....L7.F7||L7|.L7L7|"
+        ".....|FJLJ|FJ|F7|.LJ"
+        "....FJL-7.||.||||..."
+        "....L---J.LJ.LJLJ..."
+    |]
+
+let example4() =
+    [|
+        ".........."
+        ".S------7."
+        ".|F----7|."
+        ".||....||."
+        ".||....||."
+        ".|L-7F-J|."
+        ".|..||..|."
+        ".L--JL--J."
+        ".........."
+    |]
+
 let readInputFile() =
     File.ReadLines(Path.Combine(__SOURCE_DIRECTORY__, "Day10.txt"))
 
@@ -254,7 +281,7 @@ type Enclosed =
     | Inside
     | Outside
 
-let classify (x, y) (solution: int[][]) =
+let classify (x, y) (tiles: Tile[][]) (solution: int[][]) =
     let height = solution.Length
     let width = solution.[0].Length
 
@@ -268,13 +295,15 @@ let classify (x, y) (solution: int[][]) =
             let mutable trappedRight = false
             let mutable xx = x
             while xx < width do
-                if solution.[y].[xx] <> Int32.MaxValue then trappedRight <- true
+                if solution.[y].[xx] <> Int32.MaxValue then 
+                    trappedRight <- true
                 xx <- xx + 1
 
             let mutable trappedLeft = false
             let mutable xx = x
             while xx >= 0 do
-                if solution.[y].[xx] <> Int32.MaxValue then trappedLeft <- true
+                if solution.[y].[xx] <> Int32.MaxValue then
+                    trappedLeft <- true
                 xx <- xx - 1
 
             let mutable trappedDown = false
@@ -302,7 +331,7 @@ let go (solution: int[][]) =
             | Outside -> floodFill (x, y) -2 solution
 
 let solution = 
-    readInputFile()
+    example4()
     |> parse
     |> solve
     
