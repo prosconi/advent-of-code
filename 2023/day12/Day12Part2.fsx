@@ -25,6 +25,7 @@
 // Unfold your condition records; what is the new sum of possible arrangement counts?
 
 open System.IO
+open System.Threading.Tasks
 
 let example() =
     [|
@@ -66,15 +67,18 @@ let parse lines =
     |> Seq.map parseLine
     |> Seq.toArray
 
-let items = [ '#'; '.' ]
-
-let rec generateAllPossibleCombinations = 
-    function
-    | 0 -> [[]]
-    | length ->
-        [ for item in items do 
-            for rest in generateAllPossibleCombinations (length - 1) do 
-                item :: rest ]
+let generatePermutations n =
+    if n = 0 then Seq.empty
+    else 
+        let length = System.Math.Pow(2.0, float n) |> int
+        seq {
+            for i in 0..length - 1 do
+                let mutable j = i
+                for _ in 0..n - 1 do
+                    yield if j % 2 = 0 then '.' else '#'
+                    j <- j / 2
+        }
+        |> Seq.chunkBySize n
 
 let group items =
     seq {
@@ -117,13 +121,10 @@ let solution lines =
     seq {
         for (data, counts) in lines do
             let questionCount = data |> String.filter ((=)'?') |> Seq.length
-
-            printfn "Processing: %s, questionCount: %d, permutationCount: %A" data questionCount (System.Math.Pow(2.0, float questionCount))
-
-            for combination in generateAllPossibleCombinations questionCount do
+            for combination in generatePermutations questionCount do
                 let mutable str = data
                 for c in combination do str <- replaceFirstInstance str '?' c
-                yield str, counts, isSolution(str, counts)
+                yield data, counts, isSolution(str, counts)
     }
 
 let solution2 lines =
@@ -136,8 +137,31 @@ let solution2 lines =
     )
     |> solution
 
-exampleWithUnknown()
-|> parse
-|> solution2
-|> Seq.map (fun (_, _, x) -> x)
-|> Seq.countBy ((=)true)
+let mutable completed = 0
+let lockObj = new obj()
+let updateCompleted() =
+    lock lockObj (fun _ -> completed <- completed + 1)
+
+let maxTaskCount = 23
+let lines = readInputFile() |> Seq.toArray |> parse
+let chunkSize = lines.Length / maxTaskCount
+
+let tasks = 
+    lines
+    |> Seq.chunkBySize chunkSize
+    |> Seq.toArray
+    |> Array.map (fun l ->
+        Task.Run(fun _ -> 
+            let res =
+                l
+                |> solution2
+                |> Seq.map (fun (_, _, x) -> x)
+                |> Seq.filter ((=)true)
+                |> Seq.length
+
+            updateCompleted()
+            res
+        )
+    )
+
+completed
