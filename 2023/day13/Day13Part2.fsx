@@ -86,12 +86,6 @@ let partition lines =
         yield lst.ToArray()
     |] 
 
-let rotate lines =
-    let width = 0 |> Array.get lines |> String.length
-    seq { 0 .. width - 1 }
-    |> Seq.map (fun i -> lines |> Array.map (fun line -> line.[i]) |> System.String)
-    |> Seq.toArray
-
 let rec indexes delta length startIndex =
     let idx1 = startIndex + delta
     let idx2 = startIndex - delta - 1
@@ -100,18 +94,29 @@ let rec indexes delta length startIndex =
     elif idx2 < 0 then []
     else (idx1, idx2) :: indexes (delta + 1) length startIndex
 
-let findMirror(lines: string[]) =
+let getVerticalString (lines: string[]) index =
+    lines
+    |> Array.map (fun line -> line[index])
+    |> System.String
+
+let findMirrorLeftRight(lines: string[]) =
+    let width = lines[0].Length
     let m = 
-        [1..lines.Length - 1]
-        |> List.map (fun x -> x, indexes 0 lines.Length x)
+        [1..width - 1]
+        |> List.map (fun x -> x, indexes 0 width x)
         |> List.choose (fun (x, indexes) -> 
+            let minMax = indexes |> List.last
             let allTrue = 
                 indexes
-                |> List.map (fun (idx1, idx2) -> lines[idx1] = lines[idx2])
+                |> List.map (fun (idx1, idx2) -> 
+                    let line1 = getVerticalString lines idx1
+                    let line2 = getVerticalString lines idx2
+                    line1 = line2
+                )
                 |> List.forall id
 
             match allTrue with
-            | true -> Some x
+            | true -> Some (minMax, lines, x)
             | false -> None
         )
 
@@ -120,83 +125,120 @@ let findMirror(lines: string[]) =
     | [x] -> Some x
     | _ -> failwithf "Multiple mirrors found in %A" lines
 
-let replaceEveryChar (line: string) =
+let findMirrorUpDown(lines: string[]) =
+    let height = lines.Length
+    let m = 
+        [1..height - 1]
+        |> List.map (fun x -> x, indexes 0 height x)
+        |> List.choose (fun (x, indexes) -> 
+            let minMax = indexes |> List.last
+            let allTrue = 
+                indexes
+                |> List.map (fun (idx1, idx2) -> lines[idx1] = lines[idx2])
+                |> List.forall id
+
+            match allTrue with
+            | true -> Some(minMax, lines, x)
+            | false -> None
+        )
+
+    match m with
+    | [] -> None
+    | [x] -> Some x
+    | _ -> failwithf "Multiple mirrors found in %A" lines
+
+let replaceEveryChar (min, max) (line: string) =
     seq {
-        for i = 0 to line.Length - 1 do
+        for i = min to max do
             match line[i] with
             | '#' -> line.Remove(i, 1).Insert(i, ".")
             | '.' -> line.Remove(i, 1).Insert(i, "#")
             | other -> failwithf "Unexpected character %c" other
     }
 
-let fixSmudgesMinMax min max (lines: string[]) =
+let fixSmudges (lines: string[]) =
     [|
-        if min < 0 then failwithf "min=%d" min
-        if max >= lines.Length then failwithf "max=%d, length=%d" max lines.Length
-        for i = min to max do
+        for i = 0 to lines.Length - 1 do
             let line = lines.[i]
-            for newLine in replaceEveryChar line do
+            for newLine in replaceEveryChar (0, line.Length - 1) line do
                 let newArray = Array.init lines.Length (fun i -> lines[i])
                 newArray[i] <- newLine
                 yield newArray
     |]
 
-// let lines = "123456789"
-// let line = 4
-// let min, max = 
-//     let mid = lines.Length / 2
-//     if line <= mid
-//     then 0, line + line - 1
-//     else line - (lines.Length - line), lines.Length - 1
-
 let findMirrors lines =
-    let rotated = lines |> rotate
-    let f1 = lines |> findMirror
-    let f2 = rotated |> findMirror
+    let upDown = lines |> findMirrorUpDown
+    let leftRight = lines |> findMirrorLeftRight
 
-    let (min1, max1), (min2, max2) = 
-        match f1, f2 with
-        | None, None -> failwithf "Unable to find mirror in %A" lines
-        | Some x, Some y -> failwithf "Both horizontal and vertical mirrors found: %d, %d" x y
-        | Some x, None -> 
-            let min, max = 
-                let mid = lines.Length / 2
-                if x <= mid
-                then 0, x + x
-                else x - (lines.Length - x), lines.Length - 1
+    let newLines = 
+        match upDown, leftRight with
+        | None, None -> failwith "Unable to find mirror"
+        | Some (_, _, x), Some (_, _, y) -> failwithf "Both horizontal and vertical mirrors found: %d, %d" x y
+        | Some ((min, max), _, _), None -> 
+            let min' = System.Math.Min(min, max)
+            let max' = System.Math.Max(min, max)
+            lines
+            |> Seq.mapi (fun i x -> i, x)
+            |> Seq.filter (fun (i, _) -> i >= min' && i <= max')
+            |> Seq.map snd
+            |> Seq.toArray
+        | None, Some ((min, max), _, _) -> 
+            let min' = System.Math.Min(min, max)
+            let max' = System.Math.Max(min, max)
+            lines
+            |> Seq.map (fun line -> 
+                line
+                |> Seq.mapi (fun i c -> i, c)
+                |> Seq.filter (fun (i, _) -> i >= min' && i <= max')
+                |> Seq.map snd
+                |> Seq.toArray
+                |> System.String
+            )
+            |> Seq.toArray
 
-            (min, max), (0, rotated.Length)
-        | None, Some x -> 
-            let min, max = 
-                let mid = rotated.Length / 2
-                if x <= mid
-                then 0, x + x
-                else x - (rotated.Length - x), rotated.Length - 1
-
-            (0, lines.Length), (min, max)
-
-    let f1 =
-        lines
-        |> fixSmudgesMinMax min1 max1
-        |> Array.map findMirror
+    let upDownSmudge =
+        newLines
+        |> fixSmudges
+        |> Array.map findMirrorUpDown
         |> Array.tryFind Option.isSome
         |> Option.defaultValue None
     
-    let f2 =
-        rotated
-        |> fixSmudgesMinMax min2 max2
-        |> Array.map findMirror
+    let leftRightSmudge =
+        newLines
+        |> fixSmudges
+        |> Array.map findMirrorLeftRight
         |> Array.tryFind Option.isSome
         |> Option.defaultValue None
 
-    match f1, f2 with
-    | None, None -> failwithf "Unable to find mirror in %A" lines
-    | Some f1, Some f2 -> failwithf "Both horizontal and vertical mirrors found: %d, %d" f1 f2
-    | Some f1, None -> f1 * 100
-    | None, Some f2 -> f2
+    match upDownSmudge, leftRightSmudge with
+    | None, None -> 
+        printfn "upDown: %A - leftRight: %A" upDown leftRight
+        printfn "--original--"
+        lines |> Array.iter (printfn "%s")
+        printfn ""
+        printfn "--new--"
+        newLines |> Array.iter (printfn "%s")
+        failwithf "Unable to find mirror"
+    | Some (_, lines1, f1), Some (_, lines2, f2) ->
+        printfn "upDown: %A - leftRight: %A" upDown leftRight
+        printfn "--original--"
+        lines |> Array.iter (printfn "%s")
+        printfn ""
+        printfn "--new--"
+        newLines |> Array.iter (printfn "%s")
+        printfn ""
+        printfn "--up/down--"
+        lines1 |> Array.iter (printfn "%s")
+        printfn ""
+        printfn "--left/right--"
+        lines2 |> Array.iter (printfn "%s")
+        printfn ""
+        failwithf "Both horizontal and vertical mirrors found: %d, %d" f1 f2
+    | _, _ -> ()
+    // | Some f1, None -> f1 * 100
+    // | None, Some f2 -> f2
 
 
-readInputFile()
+example()
 |> partition
-|> Array.map findMirrors
-|> Array.sum
+|> Array.last
