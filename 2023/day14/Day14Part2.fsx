@@ -47,7 +47,6 @@
 // Run the spin cycle for 1000000000 cycles. Afterward, what is the total load on the north support beams?
 
 open System.IO
-open System.Collections.Generic
 
 let readInputFile() =
     File.ReadLines(Path.Combine(__SOURCE_DIRECTORY__, "Day14.txt"))
@@ -159,11 +158,6 @@ let strToCharArray (s: string) =
     s.Split('\n') |> Seq.map (fun x -> x.ToCharArray())
     |> Seq.toArray
 
-let moveEverythingNorthMemoize = memoize (fun (lines: string) -> lines |> strToCharArray |> moveEverythingNorth)
-let moveEverythingWestMemoize = memoize (fun (lines: string) -> lines |> strToCharArray |> moveEverythingWest)
-let moveEverythingSouthMemoize = memoize (fun (lines: string) -> lines |> strToCharArray |> moveEverythingSouth)
-let moveEverythingEastMemoize = memoize (fun (lines: string) -> lines |> strToCharArray |> moveEverythingEast)
-
 let moveMemoize = memoize (fun (lines: string) -> 
     lines
     |> strToCharArray
@@ -200,10 +194,12 @@ let moveEverythingWithCycles cycleCount (lines: char[][]) =
 
     lines
 
+// run this for awhile, then stop it
 let result =
     readInputFile()
     |> moveEverythingWithCycles 1_000_000_000
 
+// analyze the data, do some math... too lazy to make this programmatic
 let cycleLength = 158 - 82
 let calc index = 82 + (index - 20102) % (cycleLength + 1)
 20102 = 82
