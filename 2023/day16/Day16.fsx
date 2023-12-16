@@ -54,3 +54,126 @@
 // Ultimately, in this example, 46 tiles become energized.
 
 // The light isn't energizing enough tiles to produce lava; to debug the contraption, you need to start by analyzing the current situation. With the beam starting in the top-left heading right, how many tiles end up being energized?
+
+open System.IO
+
+let readInputFile() =
+    File.ReadLines(Path.Combine(__SOURCE_DIRECTORY__, "Day16.txt"))
+    |> Seq.map (fun s -> s.ToCharArray())
+    |> Seq.toArray
+
+let example() =
+    [|
+        @".|...\...."
+        @"|.-.\....."
+        @".....|-..."
+        @"........|."
+        @".........."
+        @".........\"
+        @"..../.\\.."
+        @".-.-/..|.."
+        @".|....-|.\"
+        @"..//.|...."
+    |]
+    |> Array.map (fun s -> s.ToCharArray())
+
+type MirrorHit =
+    {
+        WasMovingWest: bool
+        WasMovingEast: bool
+        WasMovingNorth: bool
+        WasMovingSouth: bool
+    }
+
+let start lines =
+
+    let energized = lines |> Array.map (fun line -> Array.create (Array.length line) false)
+    let mirrorHit = lines |> Array.map (fun line -> Array.create (Array.length line) { WasMovingWest = false; WasMovingEast = false; WasMovingNorth = false; WasMovingSouth = false} )
+    let width = 0 |> Array.get lines |> Array.length
+    let height = Array.length lines
+    
+    let rec go (x, y) (dx, dy) (lines: char[][]) =
+        // System.Threading.Thread.Sleep(500)
+        // System.Console.Clear()
+        
+        // energized
+        // |> Array.iteri (fun yy line -> 
+        //     line
+        //     |> Array.mapi (fun xx isEnergized -> 
+        //         if yy = y && xx = x then "X"
+        //         elif lines[yy][xx] = '.' then if isEnergized then "#" else "."
+        //         else string (lines[yy][xx])
+        //     )
+        //     |> Array.iter (fun y -> printf "%s" y)
+
+        //     printfn ""
+        // )
+
+        let isMovingWest() = dx < 0
+        let isMovingEast() = dx > 0
+        let isMovingNorth() = dy < 0
+        let isMovingSouth() = dy > 0
+
+        if x < 0 || y < 0 || x >= width || y >= height then ()
+        elif isMovingWest() && mirrorHit.[y].[x].WasMovingWest then ()
+        elif isMovingEast() && mirrorHit.[y].[x].WasMovingEast then ()
+        elif isMovingSouth() && mirrorHit.[y].[x].WasMovingSouth then ()
+        elif isMovingNorth() && mirrorHit.[y].[x].WasMovingNorth then ()
+        else
+            energized[y].[x] <- true
+
+            let c = lines.[y].[x]
+            printfn "%A - %A - %A" c (x, y) (dx, dy)
+            match c with
+            | '.' ->
+                go (x + dx, y + dy) (dx, dy) lines
+            | '/' ->
+                if isMovingEast() then
+                    mirrorHit[y][x] <- { mirrorHit[y][x] with WasMovingEast = true }
+                    go (x, y - 1) (0, -1) lines
+                elif isMovingWest() then
+                    mirrorHit[y][x] <- { mirrorHit[y][x] with WasMovingWest = true }
+                    go (x, y + 1) (0, 1) lines
+                elif isMovingNorth() then
+                    mirrorHit[y][x] <- { mirrorHit[y][x] with WasMovingNorth = true }
+                    go (x + 1, y) (1, 0) lines
+                elif isMovingSouth() then
+                    mirrorHit[y][x] <- { mirrorHit[y][x] with WasMovingSouth = true }
+                    go (x - 1, y) (-1, 0) lines
+            | '\\' -> 
+                if isMovingEast() then
+                    mirrorHit[y][x] <- { mirrorHit[y][x] with WasMovingEast = true }
+                    go (x, y + 1) (0, 1) lines
+                elif isMovingWest() then
+                    mirrorHit[y][x] <- { mirrorHit[y][x] with WasMovingWest = true }
+                    go (x, y - 1) (0, -1) lines
+                elif isMovingNorth() then
+                    mirrorHit[y][x] <- { mirrorHit[y][x] with WasMovingNorth = true }
+                    go (x - 1, y) (-1, 0) lines
+                elif isMovingSouth() then
+                    mirrorHit[y][x] <- { mirrorHit[y][x] with WasMovingSouth = true }
+                    go (x + 1, y) (1, 0) lines
+            | '|' -> 
+                if isMovingEast() || isMovingWest() then
+                    mirrorHit[y][x] <- { WasMovingEast = true; WasMovingNorth = true; WasMovingSouth = true; WasMovingWest = true }
+                    go (x, y + 1) (0, 1) lines
+                    go (x, y - 1) (0, -1) lines
+                else
+                    go (x + dx, y + dy) (dx, dy) lines
+            | '-' -> 
+                if isMovingNorth() || isMovingSouth() then
+                    mirrorHit[y][x] <- { WasMovingEast = true; WasMovingNorth = true; WasMovingSouth = true; WasMovingWest = true }
+                    go (x + 1, y) (1, 0) lines
+                    go (x - 1, y) (-1, 0) lines
+                else
+                    go (x + dx, y + dy) (dx, dy) lines
+            | _ ->
+                failwith "invalid input"
+
+    go (0, 0) (1, 0) lines
+    energized
+
+readInputFile()
+|> start
+|> Array.collect (fun x -> x |> Array.map (fun y -> if y then 1 else 0))
+|> Array.sum
