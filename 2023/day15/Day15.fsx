@@ -64,15 +64,6 @@
 
 open System.IO
 
-let hash (s:string) =
-    let mutable current = 0
-    for c in s do
-        let ascii = int c
-        current <- (current + ascii) * 17
-        current <- current % 256
-    current
+let hash (s: string) = s |> Seq.fold (fun acc c -> ((acc + int c) * 17) % 256) 0
 
-File.ReadLines(Path.Combine(__SOURCE_DIRECTORY__, "Day15.txt"))
-|> Seq.collect (fun x -> x.Split(','))
-|> Seq.map hash
-|> Seq.sum
+File.ReadLines(Path.Combine(__SOURCE_DIRECTORY__, "Day15.txt")) |> Seq.collect (fun x -> x.Split(',')) |> Seq.map hash |> Seq.sum

@@ -95,13 +95,7 @@ let splitIntoTwo (delimiter: string) (line: string) =
 let readInputFile() =
     File.ReadLines(Path.Combine(__SOURCE_DIRECTORY__, "Day15.txt"))
 
-let hash (s:string) =
-    let mutable current = 0
-    for c in s do
-        let ascii = int c
-        current <- (current + ascii) * 17
-        current <- current % 256
-    current
+let hash (s: string) = s |> Seq.fold (fun acc c -> ((acc + int c) * 17) % 256) 0
 
 let boxes = [| 0..256 |] |> Array.map (fun _ -> ResizeArray<string * int>())
 
