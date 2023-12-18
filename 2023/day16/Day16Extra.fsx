@@ -148,9 +148,9 @@ let game() =
                 Console.ResetColor()
  
     while lights.Count > 0 do
+        System.Threading.Thread.Sleep(200)
         for light in lights |> Seq.toArray do
             moveLight light
             draw()
-            System.Threading.Thread.Sleep(200)
 
 game()
