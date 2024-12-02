@@ -40,7 +40,7 @@ let lines =
     |> File.ReadAllLines
 
 let data = 
-    exampleLines
+    lines
     |> Seq.map splitSpace
     |> Seq.map (Array.map int)
     |> Seq.toArray
@@ -80,6 +80,5 @@ let isSafer line =
         |> Option.isSome
 
 data
-|> Seq.map isSafer
-|> Seq.filter id
+|> Seq.filter isSafer
 |> Seq.length
