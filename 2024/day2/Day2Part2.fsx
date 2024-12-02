@@ -1,3 +1,4 @@
+#nowarn "00025"
 // --- Part Two ---
 // The engineers are surprised by the low number of safe reports until they realize they forgot to tell you about the Problem Dampener.
 
@@ -30,13 +31,17 @@ let exampleLines =
         "1 3 6 7 9"
     |]
 
+let split (c: char) (s: string) = s.Split([| c |], StringSplitOptions.RemoveEmptyEntries)
+
+let splitSpace = split ' '
+
 let lines = 
     Path.Combine(__SOURCE_DIRECTORY__, "Day2.txt")
     |> File.ReadAllLines
 
 let data = 
-    lines
-    |> Seq.map (fun x -> x.Split([| ' ' |], StringSplitOptions.RemoveEmptyEntries))
+    exampleLines
+    |> Seq.map splitSpace
     |> Seq.map (Array.map int)
     |> Seq.toArray
 
@@ -44,8 +49,7 @@ let isSafe line =
     let isIncreasing =
         line
         |> Array.windowed 2
-        |> Array.forall (fun x -> 
-            let a, b = x[0], x[1]
+        |> Array.forall (fun [|a; b|] -> 
             if a < b
             then b - a <= 3
             else false
@@ -54,8 +58,7 @@ let isSafe line =
     let isDecreasing =
         line
         |> Array.windowed 2
-        |> Array.forall (fun x -> 
-            let a, b = x[0], x[1]
+        |> Array.forall (fun [|a; b|] -> 
             if a > b
             then a - b <= 3
             else false
@@ -68,14 +71,9 @@ let isSafer line =
     | true -> true
     | false ->
         line
-        |> Array.mapi (fun filterIndex _ -> 
-            let newLine =
-                [|
-                    for i = 0 to line.Length - 1 do
-                        if i <> filterIndex then line[i]
-                |]
-
-            newLine
+        |> Array.mapi (fun filterIndex _ ->
+            [| line[0..filterIndex - 1]; line[filterIndex + 1..line.Length] |]
+            |> Array.concat 
             |> isSafe
         )
         |> Array.tryFind id
