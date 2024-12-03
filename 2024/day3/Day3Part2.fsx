@@ -21,6 +21,8 @@ open System.Text.RegularExpressions
 
 let exampleLine = "xmul(2,4)&mul[3,7]!^don't()_mul(5,5)+mul(32,64](mul(11,8)undo()?mul(8,5))"
 
+let split (delimiter: string) (str: string) = str.Split(delimiter, StringSplitOptions.RemoveEmptyEntries)
+
 let line = 
     Path.Combine(__SOURCE_DIRECTORY__, "Day3.txt")
     |> File.ReadAllLines
@@ -33,8 +35,9 @@ let parseLine (line: string) =
 
 let data = line
 
-data.Split([|"do()"|], StringSplitOptions.RemoveEmptyEntries)
-|> Seq.choose (fun x -> x.Split([| "don't()" |], StringSplitOptions.RemoveEmptyEntries) |> Seq.tryHead)
+data
+|> split "do()"
+|> Seq.choose (split "don't()" >> Seq.tryHead)
 |> Seq.collect parseLine
 |> Seq.map (fun (x, y) -> x * y)
 |> Seq.sum
