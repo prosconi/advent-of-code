@@ -73,16 +73,19 @@ let inBounds' = inBounds (data[0].Length, data.Length)
 
 let word = "XMAS"
 
+let getChar (x, y) = 
+    match inBounds'(x, y) with
+    | true -> data[y][x]
+    | false -> ' '
+
 let rec count nextFn letterIndex currentCoord =
     let nextCoord = nextFn currentCoord
-    let isInBounds = inBounds' currentCoord
     let currentChar = word[letterIndex]
 
-    match isInBounds with
+    match inBounds' currentCoord with
     | true ->
-        let x, y = currentCoord
-        let c = data[y][x]
-        match c = currentChar with 
+        let dataChar = getChar currentCoord
+        match dataChar = currentChar with 
         | true ->
             match letterIndex = word.Length - 1 with
             | true -> 1
