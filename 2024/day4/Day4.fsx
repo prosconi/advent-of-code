@@ -76,11 +76,11 @@ let getChar (x, y) =
     | true -> data[y][x]
     | false -> ' '
 
-let count nextFn currentCoord =
-    let c1 = nextFn currentCoord
+let count nextFn c0 =
+    let c1 = nextFn c0
     let c2 = nextFn c1
     let c3 = nextFn c2
-    let word = $"{getChar currentCoord}{getChar c1}{getChar c2}{getChar c3}"
+    let word = $"{getChar c0}{getChar c1}{getChar c2}{getChar c3}"
     match word with
     | "XMAS" -> 1
     | _ -> 0
