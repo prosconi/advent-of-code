@@ -71,38 +71,29 @@ let data = lines
 
 let inBounds' = inBounds (data[0].Length, data.Length)
 
-let word = "XMAS"
-
 let getChar (x, y) = 
     match inBounds'(x, y) with
     | true -> data[y][x]
     | false -> ' '
 
-let rec count nextFn letterIndex currentCoord =
-    let nextCoord = nextFn currentCoord
-    let currentChar = word[letterIndex]
-
-    match inBounds' currentCoord with
-    | true ->
-        let dataChar = getChar currentCoord
-        match dataChar = currentChar with 
-        | true ->
-            match letterIndex = word.Length - 1 with
-            | true -> 1
-            | false -> count nextFn (letterIndex + 1) nextCoord
-        | false -> 0
-    | false ->
-        0
+let count nextFn currentCoord =
+    let c1 = nextFn currentCoord
+    let c2 = nextFn c1
+    let c3 = nextFn c2
+    let word = $"{getChar currentCoord}{getChar c1}{getChar c2}{getChar c3}"
+    match word with
+    | "XMAS" -> 1
+    | _ -> 0
 
 let countXmas coords =
-    count left 0 coords +
-        count right 0 coords +
-        count up 0 coords + 
-        count down 0 coords +
-        count upLeft 0 coords +
-        count upRight 0 coords +
-        count downLeft 0 coords +
-        count downRight 0 coords
+    count left coords +
+        count right coords +
+        count up coords + 
+        count down coords +
+        count upLeft coords +
+        count upRight coords +
+        count downLeft coords +
+        count downRight coords
 
 seq {
     for y = 0 to data.Length - 1 do
