@@ -91,37 +91,19 @@ let isValid (update: int[]) =
 let getMid (update: int[]) =
     update[update.Length / 2]
 
-type Page(page: int) = 
-    member _.Page = page
-    
-    override _.GetHashCode() =
-        page
-
-    override this.Equals(that) = 
-        let that = that :?> Page
-        that.Page = this.Page
-
-    interface IComparable with
-        member this.CompareTo(that) =
-            let that = that :?> Page
-            if this.Page = that.Page
-            then 0
-            else 
-                match rulesDict.TryGetValue(this.Page) with
-                | true, values -> 
-                    if Array.contains that.Page values
-                    then 1
-                    else -1
-                | _ -> -1
+let pageCompare a b =
+    if a = b
+    then 0
+    else
+        match rulesDict.TryGetValue(a) with
+        | true, values -> 
+            if Array.contains b values
+            then 1
+            else -1
+        | _ -> -1
 
 updates
 |> Seq.filter (not << isValid)
-|> Seq.map (fun v -> 
-    v
-    |> Array.map Page
-    |> Array.sortDescending
-    |> Array.map (fun x -> x.Page)
-)
+|> Seq.map (Array.sortWith pageCompare)
 |> Seq.map getMid
-|> Seq.toArray
 |> Seq.sum
