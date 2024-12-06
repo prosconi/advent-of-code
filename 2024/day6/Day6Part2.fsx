@@ -173,7 +173,7 @@ type CalcResult =
 
 let calc data startingPos startingDir =
 
-    let rec tick' (positionHistory: Dictionary<_,_>) position direction =
+    let rec tick (positionHistory: Dictionary<_,_>) position direction =
         let nextPosition =
             match direction with
             | FacingNorth -> up position
@@ -191,23 +191,22 @@ let calc data startingPos startingDir =
             | None -> NoLoop
             | Some c when isObstacle c -> 
                 let newDirection = ninetyDegreeRight direction
-                tick' positionHistory position newDirection
+                tick positionHistory position newDirection
             | _ ->
-                tick' positionHistory nextPosition direction
+                tick positionHistory nextPosition direction
 
-    let positionHistory = new Dictionary<_,_>()
-    tick' positionHistory startingPos startingDir
+    let positionHistory = Dictionary<_,_>()
+    tick positionHistory startingPos startingDir
 
-let results =
-    seq {
-        for y in 0 .. height - 1 do
-            for x in 0 .. width - 1 do
-                match originalData[y][x] with
-                | '.' -> 
-                    let newData = data()
-                    newData[y][x] <- '#'
-                    calc newData startingPos startingDirection
-                | _ -> NoLoop
-    }
-    |> Seq.filter (fun x -> x = Loop)
-    |> Seq.length
+seq {
+    for y in 0 .. height - 1 do
+        for x in 0 .. width - 1 do
+            match originalData[y][x] with
+            | '.' -> 
+                let newData = data()
+                newData[y][x] <- '#'
+                calc newData startingPos startingDirection
+            | _ -> NoLoop
+}
+|> Seq.filter (fun x -> x = Loop)
+|> Seq.length
