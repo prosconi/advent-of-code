@@ -44,13 +44,15 @@ let data =
     lines
     |> Array.map parseLine
 
+let (|||) a b = int64 $"{a}{b}"
+
 let rec canSolve (equation: int64 []) (i: int) (sum: int64) (target: int64) =
     if i = equation.Length then
         sum = target
     else
-        canSolve equation (i + 1) (sum + equation[i]) target
-        || canSolve equation (i + 1) (sum * equation[i]) target
-        || canSolve equation (i + 1) (int64 $"{sum}{equation[i]}") target
+           canSolve equation (i + 1) (sum  +  equation[i]) target
+        || canSolve equation (i + 1) (sum  *  equation[i]) target
+        || canSolve equation (i + 1) (sum ||| equation[i]) target
 
 data
 |> Array.sumBy (fun d ->
