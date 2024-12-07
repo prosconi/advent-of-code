@@ -1,3 +1,4 @@
+#time
 // --- Part Two ---
 // While The Historians begin working around the guard's patrol route, you borrow their fancy device and step outside the lab. From the safety of a supply closet, you time travel through the last few months and record the nightly status of the lab's guard post on the walls of the closet.
 
@@ -127,38 +128,22 @@ let down (x, y) = (x, y + 1)
 let left (x, y) = (x - 1, y)
 let right (x, y) = (x + 1, y)
 
-let charToDirection = function
-    | '^' -> FacingNorth
-    | '>' -> FacingEast
-    | 'v' -> FacingSouth
-    | '<' -> FacingWest
-    | _ -> failwith "Invalid direction"
-
-let findStartingPosition() =
+let startingPos, char =
     originalData
     |> Seq.mapi (fun y line ->
         line
         |> Seq.mapi (fun x c -> (x, y), c)
-        |> Seq.tryFind (fun (_, c) -> 
-            match c with
-            | '>'
-            | '<'
-            | '^'
-            | 'v' -> true
-            | _ -> false
-        )
+        |> Seq.tryFind (fun (_, c) -> c = '^')
     )
     |> Seq.choose id
     |> Seq.head
 
-let startingPos, char = findStartingPosition()
-let startingDirection = charToDirection char
-
+let startingDirection = FacingNorth
 let width = originalData[0].Length
 let height = originalData.Length
 
 let inBounds (x, y) = x >= 0 && x < width && y >= 0 && y < height
-    
+
 let getChar (data: char[][]) (x, y) =
     if inBounds (x, y)
     then Some(data[y][x])
