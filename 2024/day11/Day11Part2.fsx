@@ -43,12 +43,11 @@ let blink (d: Dictionary<int64,int64>) =
 
 let result =
     let d =
-        let m = Dictionary<int64, int64>()
-        for x in data do
-            match m.ContainsKey x with
-            | true -> m[x] <- m[x] + 1L
-            | false -> m.Add(x, 1L)
-        m
+        data
+        |> Seq.groupBy id
+        |> Seq.map (fun (k, v) -> k, v |> Seq.length |> int64)
+        |> dict
+        |> Dictionary
 
     for _ = 1 to 75 do 
         blink d
