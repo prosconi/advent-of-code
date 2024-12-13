@@ -62,6 +62,15 @@ let example1 =
         "EEEC"
     |]
 
+let example2 =
+    [|
+        "EEEEE"
+        "EXXXX"
+        "EEEEE"
+        "EXXXX"
+        "EEEEE"
+    |]
+
 let example = 
     [|
         "RRRRIICCFF"
@@ -125,8 +134,10 @@ let fill startPosition =
     positions
 
 type F = 
-    | Vertical
-    | Horizontal
+    | FromDown
+    | FromUp
+    | FromLeft
+    | FromRight
 
 type Fence =
     { F: F
@@ -160,11 +171,15 @@ let calculateDiscount (perimeter: seq<Fence>) =
         )
         |> Seq.sum
 
-    let xDiscount = 
-        calc (fun x -> fst x.Pos) (fun x -> snd x.Pos) (fun x -> x.F = Vertical)
-    let yDiscount = 
-        calc (fun x -> snd x.Pos) (fun x -> fst x.Pos) (fun x -> x.F = Horizontal)
-    xDiscount + yDiscount
+    let discount1 = 
+        calc (fun x -> fst x.Pos) (fun x -> snd x.Pos) (fun x -> x.F = FromLeft)
+    let discount2 = 
+        calc (fun x -> fst x.Pos) (fun x -> snd x.Pos) (fun x -> x.F = FromRight)
+    let discount3 = 
+        calc (fun x -> snd x.Pos) (fun x -> fst x.Pos) (fun x -> x.F = FromUp)
+    let discount4 = 
+        calc (fun x -> snd x.Pos) (fun x -> fst x.Pos) (fun x -> x.F = FromDown)
+    discount1, discount2, discount3, discount4
 
 let prices =
     [
@@ -175,10 +190,10 @@ let prices =
                 fence.Keys
                 |> Seq.collect (fun pos -> 
                     [
-                        { F = Horizontal; Pos = up pos }
-                        { F = Horizontal; Pos = down pos }
-                        { F = Vertical; Pos = left pos } 
-                        { F = Vertical; Pos = right pos }
+                        { F = FromUp; Pos = up pos }
+                        { F = FromDown; Pos = down pos }
+                        { F = FromLeft; Pos = left pos } 
+                        { F = FromRight; Pos = right pos }
                     ]
                 )
                 |> Seq.filter (fun x -> 
@@ -189,9 +204,11 @@ let prices =
                 |> Seq.toArray
                 
             let perimeter = perimeters |> Seq.length
-            let discount = calculateDiscount perimeters
+            let d1, d2, d3, d4 = calculateDiscount perimeters
+            let discount = d1 + d2 + d3 + d4
             let price = area * (perimeter - discount)
-            //yield ch, $"{area} * ({perimeter} - {discount}) = {price}"
+            let str = $"{area} * ({perimeter} - {d1} - {d2} - {d3} - {d4}) = {price}"
+            //yield ch, str, perimeters
             yield ch, price
     ]
 
