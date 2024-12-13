@@ -1,3 +1,4 @@
+#nowarn "00025"
 // --- Day 13: Claw Contraption ---
 // Next up: the lobby of a resort on a tropical island. The Historians take a moment to admire the hexagonal floor tiles before spreading out.
 
@@ -44,3 +45,107 @@
 // You estimate that each button would need to be pressed no more than 100 times to win a prize. How else would someone be expected to play?
 
 // Figure out how to win as many prizes as possible. What is the fewest tokens you would have to spend to win all possible prizes?
+
+open System.IO
+
+let example = 
+    [|
+        "Button A: X+94, Y+34"
+        "Button B: X+22, Y+67"
+        "Prize: X=8400, Y=5400"
+        ""
+        "Button A: X+26, Y+66"
+        "Button B: X+67, Y+21"
+        "Prize: X=12748, Y=12176"
+        ""
+        "Button A: X+17, Y+86"
+        "Button B: X+84, Y+37"
+        "Prize: X=7870, Y=6450"
+        ""
+        "Button A: X+69, Y+23"
+        "Button B: X+27, Y+71"
+        "Prize: X=18641, Y=10279"
+        ""
+    |]
+
+let splitIntoTwo (ch: char) (str: string) = 
+    match str.Split ch with
+    | [| partA; partB |] -> (partA, partB)
+    | _ -> failwithf "Error in code: %s, ch=%A" str ch
+
+let parseXY (str: string) =
+    str
+    |> splitIntoTwo '+' 
+    |> snd
+    |> int
+
+let parsePrizeXY (str: string) =
+    str
+    |> splitIntoTwo '=' 
+    |> snd
+    |> int
+
+let parseButton (str: string) =
+    let x, y = splitIntoTwo ',' str
+    parseXY x, parseXY y
+
+let parsePrize (str: string) =
+    let x, y = splitIntoTwo ',' str
+    parsePrizeXY x, parsePrizeXY y
+
+type Solution =
+    {
+        ButtonA: (int * int)
+        ButtonB: (int * int)
+        Prize: (int * int)
+    }
+
+let fileLines = 
+    File.ReadAllLines(Path.Combine(__SOURCE_DIRECTORY__, "Day13.txt"))
+
+let data =
+    fileLines
+    |> Seq.filter (fun x -> x <> "")
+    |> Seq.chunkBySize 3
+    |> Seq.map (fun [| buttonAString; buttonBString; prizeString |] -> 
+        let buttonA = buttonAString |> splitIntoTwo ':' |> snd |> parseButton
+        let buttonB = buttonBString |> splitIntoTwo ':' |> snd |> parseButton
+        let prize = prizeString |> splitIntoTwo ':' |> snd |> parsePrize
+        { ButtonA = buttonA; ButtonB = buttonB; Prize = prize }
+    )
+    |> Seq.toArray
+
+let cost (aCount, bCount) = aCount * 3 + bCount
+
+let solve prize buttonOne buttonTwo =
+    let mutable x, y = 0, 0
+    let mutable dx1, dy1 = buttonOne
+    let mutable dx2, dy2 = buttonTwo
+    let mutable presses = 0
+    let mutable exit = false
+    let mutable otherPressesX = 0
+    let mutable otherPressesY = 0
+    let mutable prizeX, prizeY = prize
+    while (x < prizeX && y < prizeY) && not exit do
+        if (prizeX - x) % dx2 = 0 && (prizeY - y) % dy2 = 0 then
+            otherPressesX <- (prizeX - x) / dx2
+            otherPressesY <- (prizeY - y) / dy2
+            if otherPressesX <> otherPressesY then 
+                x <- x + dx1
+                y <- y + dy1
+                presses <- presses + 1
+            else
+                exit <- true
+        else
+            x <- x + dx1
+            y <- y + dy1
+            presses <- presses + 1
+
+    if exit
+    then Some (presses, otherPressesX)
+    else None
+
+data
+|> Seq.choose (fun { ButtonA = a; ButtonB = b; Prize = p } -> solve p a b)
+|> Seq.map cost
+|> Seq.sum
