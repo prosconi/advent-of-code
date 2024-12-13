@@ -81,6 +81,14 @@
 open System.IO
 open System.Collections.Generic
 
+let example1 =
+    [|
+        "AAAA"
+        "BBCD"
+        "BBCC"
+        "EEEC"
+    |]
+
 let example = 
     [|
         "RRRRIICCFF"
@@ -96,10 +104,10 @@ let example =
     |]
 
 let fileLines = 
-    File.ReadLines(Path.Combine(__SOURCE_DIRECTORY__, "Day12.txt"))
+    File.ReadAllLines(Path.Combine(__SOURCE_DIRECTORY__, "Day12.txt"))
 
 let data =
-    example
+    fileLines
     
 let up (x, y) = (x, y - 1)
 let down (x, y) = (x, y + 1)
@@ -110,21 +118,28 @@ let height = data.Length
 let inBounds (x, y) = 
     x >= 0 && x < width
         && y >= 0 && y < height
+
+type Bounds = 
+    | InBounds of char
+    | OutOfBounds of int * int
+    static member get =
+        function | InBounds x -> x | OutOfBounds _ -> failwith "Out of bounds"
+
 let getValue (x, y) =
     if inBounds (x, y)
-    then Some(data[y][x])
-    else None
+    then InBounds(data[y][x])
+    else OutOfBounds (x, y)
 
 let fill startPosition =
     let positions = Dictionary()
-    let ch = getValue startPosition |> Option.get
+    let ch = startPosition |> getValue |> Bounds.get
     let directions = [up; down; left; right]
     let q = Queue()
     q.Enqueue(startPosition)
     while q.Count > 0 do
         let pos = q.Dequeue()
         match getValue pos with
-        | Some c when c = ch ->
+        | InBounds c when c = ch ->
             match positions.ContainsKey pos with
             | false ->
                 positions.Add(pos, c)
@@ -136,7 +151,6 @@ let fill startPosition =
         | _ -> ()
     positions
 
-
 let fences = ResizeArray<Dictionary<_,_>>()
 
 let alreadyInFence pos =
@@ -147,5 +161,29 @@ for y, row in data |> Seq.indexed do
     for x, ch in row |> Seq.indexed do
         if not <| alreadyInFence (x, y) then
             fences.Add(fill (x, y))
-        
-fences |> Seq.toArray
+
+let prices =
+    [
+        for fence in fences do
+            let ch = fence.Values |> Seq.head
+            let area = fence.Values.Count
+            let perimeters = 
+                fence.Keys
+                |> Seq.collect (fun pos -> [up pos; down pos; left pos; right pos])
+                |> Seq.filter (fun v -> 
+                    match getValue v with
+                    | OutOfBounds _ -> true
+                    | InBounds c -> c <> ch
+                )
+                |> Seq.toArray
+                |> Array.sortBy snd
+                
+            let perimeter = perimeters |> Seq.length
+            let price = area * perimeter
+            // yield ch, $"{area} * {perimeter} = {price}", perimeters
+            yield ch, price
+    ]
+
+prices 
+|> Seq.sumBy snd
+
