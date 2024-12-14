@@ -1,3 +1,4 @@
+#nowarn "00025"
 // --- Part Two ---
 // Fortunately, the Elves are trying to order so much fence that they qualify for a bulk discount!
 
