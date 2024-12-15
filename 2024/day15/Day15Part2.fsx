@@ -26,7 +26,7 @@ let example =
         "v^^>>><<^^<>>^v^<v^vv<>v^<<>^<^v^v><^<<<><<^<v><v<>vv>>v><v^<vv<>v^<<^"
     |]
 
-type Piece = Wall | Ship | Box | Empty
+type Piece = Wall | Ship | LeftBox | RightBox | Empty
 type Direction = Up | Down | Left | Right
 type Line = 
     | Pieces of Piece[]
@@ -44,7 +44,7 @@ let charToPiece (ch: char) =
     match ch with
     | '#' -> [Wall; Wall]
     | '@' -> [Ship; Empty]
-    | 'O' -> [Box; Box]
+    | 'O' -> [LeftBox; RightBox]
     | '.' -> [Empty; Empty]
     | _ -> failwithf "Invalid piece: %A" ch
 
@@ -95,11 +95,12 @@ let mutable shipLocation =
 
 let printPieces() =
     for y = 0 to pieces.Length - 1 do
-        for x = 0 to pieces.[y].Length - 1 do
-            match pieces.[y].[x] with
+        for x = 0 to pieces[y].Length - 1 do
+            match pieces[y][x] with
             | Wall -> Console.Write '#'
             | Ship -> Console.Write '@'
-            | Box -> Console.Write 'O'
+            | LeftBox -> Console.Write '['
+            | RightBox -> Console.Write ']'
             | Empty -> Console.Write '.'
         Console.WriteLine()
 
@@ -116,7 +117,7 @@ let pushBox (x, y) direction =
         match piece with
         | Wall -> 
             exit <- true
-        | Box -> 
+        | LeftBox | RightBox -> 
             let x, y = nextCoords (nextX, nextY) direction
             nextX <- x
             nextY <- y
@@ -129,10 +130,24 @@ let pushBox (x, y) direction =
     if canMove then
         pieces[y][x] <- Empty
         match direction with
-        | Up -> for y = startY downto nextY do pieces[y][x] <- Box
-        | Down -> for y = startY to nextY do pieces[y][x] <- Box
-        | Left -> for x = startX downto nextX do pieces[y][x] <- Box
-        | Right -> for x = startX to nextX do pieces[y][x] <- Box
+        | Up -> 
+            for y in [nextY .. -1 .. startY] do 
+                pieces[y][x] <- RightBox
+                pieces[y][x - 1] <- LeftBox
+        | Down -> 
+            for y in [startY .. 1 .. nextY] do 
+                pieces[y][x] <- RightBox
+                pieces[y][x - 1] <- LeftBox
+        | Left -> 
+            printfn "Left: %d, %d" nextX startX
+            for x in [nextX .. -2 .. startX] do
+                pieces[y][x] <- RightBox
+                pieces[y][x - 1] <- LeftBox
+        | Right -> 
+            printfn "Right: %d, %d" nextX startX
+            for x in [startX .. 2 .. nextX] do 
+                pieces[y][x] <- LeftBox
+                pieces[y][x + 1] <- RightBox
     canMove
 
 let moveShip direction =
@@ -141,7 +156,7 @@ let moveShip direction =
     let piece = getPiece (nextX, nextY)
     match piece with
     | Wall -> ()
-    | Box -> 
+    | LeftBox | RightBox ->
         if pushBox (nextX, nextY) direction then
             pieces[currentY][currentX] <- Empty
             pieces[nextY][nextX] <- Ship
@@ -153,14 +168,9 @@ let moveShip direction =
     | Ship -> 
         failwithf "Ship is not where it should be: %A" shipLocation
 
-
-moveShip Down
+moveShip Left
 printPieces()
 shipLocation
-
-
-
-
 
 for direction in directions do
     moveShip direction
@@ -170,7 +180,7 @@ pieces
     x
     |> Array.mapi (fun ii xx ->
         match xx with
-        | Box -> Some(i * 100 + ii)
+        | LeftBox -> Some(i * 100 + ii)
         | _ -> None
     )
 )
