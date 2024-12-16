@@ -36,6 +36,16 @@ let nextCoords (x, y) (d: Direction) =
     | Left -> (x - 1, y)
     | Right -> (x + 1, y)
 
+type Rect =
+    {
+        Left: int
+        Top: int
+        Width: int
+        Height: int
+    }
+    member this.Right = this.Left + this.Width
+    member this.Bottom = this.Top + this.Height
+
 type Piece(pieceType, position) =
     let mutable position = position
 
@@ -46,28 +56,48 @@ type Piece(pieceType, position) =
     member this.SetPosition(newPosition) =
         position <- newPosition
 
+    member this.CanPush(direction, pieces: seq<Piece>) =
+        let x, y = this.Postion
+        let nextPosition = nextCoords (x, y) direction
+
+        let otherPieces = 
+            pieces
+            |> Seq.filter (fun x -> x <> this)
+            |> Seq.filter (fun x -> x.Intersects nextPosition this.Width)
+            |> Seq.toArray
+
+        match otherPieces with
+        | [||] -> true
+        | others -> 
+            others
+            |> Seq.forall (fun other -> 
+                match other.PieceType with
+                | Box -> other.CanPush(direction, pieces)
+                | _ -> false
+            )
+
     member this.TryPush(direction, pieces: seq<Piece>) =
         let x, y = this.Postion
-        let checkPosition, nextPosition = 
-            match direction with
-            | Right -> (x + 2, y), (x + 1, y)
-            | Left  -> (x - 1, y), (x - 1, y)
-            | Up    -> (x, y - 1), (x, y - 1)
-            | Down  -> (x, y + 1), (x, y + 1)
+        let nextPosition = nextCoords (x, y) direction
 
-        match pieces |> Seq.tryFind (fun x -> x.Intersects checkPosition this.Width) with
-        | Some other -> 
-            match other.PieceType with
-            | Box -> 
-                if other.TryPush(direction, pieces) then
-                    this.SetPosition(nextPosition)
-                    true
-                else
-                    false
-            | _ -> false
-        | None -> 
+        let otherPieces = 
+            pieces
+            |> Seq.filter (fun x -> x <> this)
+            |> Seq.filter (fun x -> x.Intersects nextPosition this.Width)
+            |> Seq.toArray
+
+        match otherPieces with
+        | [||] -> 
             this.SetPosition(nextPosition)
-            true
+        | others -> 
+            others
+            |> Seq.iter (fun other -> 
+                match other.PieceType with
+                | Box -> 
+                    other.TryPush(direction, pieces)
+                    this.SetPosition(nextPosition)
+                | _ -> ()
+            )
 
     member this.Render() =
         Console.SetCursorPosition(this.Postion)
@@ -84,20 +114,18 @@ type Piece(pieceType, position) =
 
     member this.Left = fst(this.Postion)
 
-    member this.Right = this.Left + this.Width
+    member this.Right = this.Left + this.Width  
 
     member this.Top = snd(this.Postion)
 
     member this.Bottom = this.Top
 
     member this.Intersects (otherX, otherY) width =
-        let x, y = position
-        match pieceType with
-        | Ship -> false
-        | Wall
-        | Box -> 
-            x = otherX && y = otherY ||
-                x = otherX + width && y = otherY
+        let r1 = { Left = this.Left; Top = this.Top; Width = this.Width; Height = 1 }
+        let r2 = { Left = otherX; Top = otherY; Width = width; Height = 1 }
+        r1.Left <= r2.Right
+            && r1.Right >= r2.Left
+            && r1.Top = r2.Top
 
 type Line = 
     | Pieces of Piece[]
@@ -127,17 +155,21 @@ let charToDirection (ch: char) =
     | _ -> failwithf "Invalid direction: %A" ch
 
 let fileLines = 
-    Path.Combine(__SOURCE_DIRECTORY__, "Day15.txt") |> File.ReadLines
+    Path.Combine(__SOURCE_DIRECTORY__, "Day15.txt")
+    |> File.ReadLines
+    |> Seq.toArray
 
 let pieces = ResizeArray()
 let directions = ResizeArray()
-for y = 0 to example.Length - 1 do
-    let line = example[y]
+let data = fileLines
+
+for y = 0 to data.Length - 1 do
+    let line = data[y]
     if line = "" then 
         ()
     elif line.StartsWith "#" then 
-        for x = 0 to example[y].Length - 1 do
-            let ch = example[y][x]
+        for x = 0 to data[y].Length - 1 do
+            let ch = data[y][x]
             let realX = x * 2
             let position = (realX, y)
             charToPiece ch position |> Option.iter(pieces.Add)
@@ -148,6 +180,7 @@ for y = 0 to example.Length - 1 do
 let ship = pieces |> Seq.find(fun p -> p.PieceType = Ship)
 
 let drawPieces() =
+    Console.Clear()
     for piece in pieces do
         piece.Render()
 
@@ -160,7 +193,8 @@ let tryMove direction =
     | Some p -> 
         match p.PieceType with
         | Box -> 
-            if p.TryPush(direction, pieces) then
+            if p.CanPush(direction, pieces) then
+                p.TryPush(direction, pieces)
                 ship.SetPosition(next)
         | _ -> ()
     | None -> 
@@ -188,4 +222,19 @@ let rec gameLoop() =
         ()
     | _ -> gameLoop()
 
-gameLoop()
+let simulationLoop() =
+    for d in directions do
+        tryMove d
+
+    pieces
+    |> Seq.map (fun p ->
+        let x, y = p.Postion
+        match p.PieceType with
+        | Box -> Some(x + y * 100)
+        | _ -> None
+    )
+    |> Seq.choose id
+    |> Seq.sum
+
+simulationLoop()
+//gameLoop()
