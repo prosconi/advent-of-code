@@ -55,12 +55,10 @@ type Piece(pieceType, position) =
             | Up    -> (x, y - 1), (x, y - 1)
             | Down  -> (x, y + 1), (x, y + 1)
 
-        match pieces |> Seq.tryFind (fun x -> x.Intersects(checkPosition)) with
+        match pieces |> Seq.tryFind (fun x -> x.Intersects checkPosition this.Width) with
         | Some other -> 
-            printfn "%A" other.PieceType
             match other.PieceType with
             | Box -> 
-                printfn "this.Position = %A, other.Position = %A" position other.Postion
                 if other.TryPush(direction, pieces) then
                     this.SetPosition(nextPosition)
                     true
@@ -78,15 +76,29 @@ type Piece(pieceType, position) =
         | Ship -> Console.Write "@"
         | Box -> Console.Write "[]"
 
-    member this.Intersects(otherX, otherY) =
+    member this.Width = 
+        match pieceType with
+        | Wall -> 1
+        | Ship -> 0
+        | Box -> 1
+
+    member this.Left = fst(this.Postion)
+
+    member this.Right = this.Left + this.Width
+
+    member this.Top = snd(this.Postion)
+
+    member this.Bottom = this.Top
+
+    member this.Intersects (otherX, otherY) width =
         let x, y = position
         match pieceType with
         | Ship -> false
         | Wall
         | Box -> 
-            (x = otherX && y = otherY) 
-                || (x = otherX - 1 && y = otherY)
-        
+            x = otherX && y = otherY ||
+                x = otherX + width && y = otherY
+
 type Line = 
     | Pieces of Piece[]
     | Directions of Direction[]
@@ -136,14 +148,15 @@ for y = 0 to example.Length - 1 do
 let ship = pieces |> Seq.find(fun p -> p.PieceType = Ship)
 
 let drawPieces() =
-    Console.Clear()
     for piece in pieces do
         piece.Render()
-    Console.WriteLine(sprintf "%A" ship.Postion)
+
+    Console.SetCursorPosition(20, 10)
+    Console.Write(sprintf "%A" ship.Postion)
     
 let tryMove direction =
     let next = nextCoords ship.Postion direction
-    match pieces |> Seq.tryFind (fun x -> x.Intersects(next)) with
+    match pieces |> Seq.tryFind (fun x -> x.Intersects next 0) with
     | Some p -> 
         match p.PieceType with
         | Box -> 
@@ -154,6 +167,7 @@ let tryMove direction =
         ship.SetPosition(next)
 
 let rec gameLoop() =
+    Console.Clear()
     drawPieces()
     
     let key = Console.ReadKey()
