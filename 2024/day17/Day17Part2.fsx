@@ -117,7 +117,7 @@ let rec search(currentValue, positionInString) =
         let strOutput = output |> Seq.map string |> String.concat ""
         let strProgram = program |> Seq.map string |> String.concat ""
         if strProgram.EndsWith strOutput then
-            printfn "dfs (%d): %s = %s" overrideA strOutput strProgram
+            printfn "search (%d): %s = %s" overrideA strOutput strProgram
             search(overrideA, positionInString + 1)
 
 search(0, 0)
