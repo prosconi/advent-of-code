@@ -66,21 +66,15 @@ let south (x, y) = (x, y + 1)
 let east (x, y) = (x + 1, y)
 let west (x, y) = (x - 1, y)
 
-type Facing =
-    | North
-    | South
-    | East
-    | West
-
 let directions = 
     [
-        North, north
-        South, south
-        East, east
-        West, west
+        north
+        south
+        east
+        west
     ]
 
-type D = { Pos: (int * int); Dir: Facing }
+type D = int * int
 
 let inBounds (x, y) = 
     x >= 0 && x < width
@@ -94,48 +88,30 @@ let getPiece (x, y) =
         then Wall
         else memorySpace[x,y]
 
-let printMaze (scores: Dictionary<D,int>) =
-    let scores = scores |> Seq.map (fun kvp -> kvp.Key.Pos, kvp.Value) |> dict
-    Console.Clear()
-    for y = 0 to height - 1 do
-        for x = 0 to width - 1 do
-            if scores.ContainsKey(x, y)
-            then
-                Console.ForegroundColor <- ConsoleColor.Green 
-                Console.Write 'X'
-                Console.ResetColor()
-            else
-                match getPiece (x, y) with
-                | Wall -> Console.Write '#'
-                | End -> Console.Write 'E'
-                | Empty -> Console.Write '.'
-        Console.WriteLine()
-    Threading.Thread.Sleep(10)
-
 let dijsktra() =
     let scores = Dictionary()
-    scores.Add({ Pos = startPos; Dir = East }, 0)
+    scores.Add(startPos, 0)
 
     let queue = PriorityQueue<_,_>()
-    queue.Enqueue({ Pos = startPos; Dir = East }, 0)
+    queue.Enqueue(startPos, 0)
 
-    while queue.Count > 0 do
-        // printMaze scores
-        let d = queue.Dequeue()
-        for direction, fn in directions do
-            let nextPos = fn d.Pos
+    let mutable highScore = None
+
+    while queue.Count > 0 && highScore = None do
+        let pos = queue.Dequeue()
+        for dirFn in directions do
+            let nextPos = dirFn pos
             match getPiece nextPos with
-            | End -> failwithf "Done! %A" <| scores[d] + 1
+            | End -> highScore <- Some(scores[pos] + 1)
             | Empty -> 
-                let newScore = scores[d] + 1
-                let nextD = { Pos = nextPos; Dir = direction }
-                if not <| scores.ContainsKey nextD then
-                    scores.Add(nextD, Int32.MaxValue)
-                if newScore < scores[nextD] then
-                    scores[nextD] <- newScore
-                    queue.Enqueue(nextD, newScore)
+                let newScore = scores[pos] + 1
+                if not <| scores.ContainsKey nextPos then
+                    scores.Add(nextPos, Int32.MaxValue)
+                if newScore < scores[nextPos] then
+                    scores[nextPos] <- newScore
+                    queue.Enqueue(nextPos, newScore)
             | _ -> 
                 ()
-    scores
+    highScore
 
 dijsktra()
