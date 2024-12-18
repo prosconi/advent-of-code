@@ -106,7 +106,7 @@ let runProgram overrideA =
     
     output |> Seq.toArray, PROG
 
-let rec search(currentValue, positionInString) =
+let rec search(currentValue) =
     for i in 0L..7L do
         let overrideA = currentValue * 8L + i
         let output, program = runProgram overrideA
@@ -118,6 +118,6 @@ let rec search(currentValue, positionInString) =
         let strProgram = program |> Seq.map string |> String.concat ""
         if strProgram.EndsWith strOutput then
             printfn "search (%d): %s = %s" overrideA strOutput strProgram
-            search(overrideA, positionInString + 1)
+            search(overrideA)
 
-search(0, 0)
+search(0)
