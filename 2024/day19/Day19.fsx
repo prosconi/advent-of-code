@@ -21,30 +21,30 @@ let readInputFile() =
 let data = 
     // let lines = example
     let lines = readInputFile()
-    {| AvailablePatterns = lines[0].Split(',') |> Array.map (fun x -> x.Trim()) |> Array.sortByDescending _.Length
+    {| AvailablePatterns = lines[0].Split(',') |> Array.map (fun x -> x.Trim()) |> Array.distinct
        DisplayPatterns = lines[2..] |}
 
-let rec isValid path (availablePatterns: string[]) (displayPattern: string) =
-    match displayPattern.Length with
-    | 0 -> 
-        true
-    | _ ->
-        let patternMatches = 
-            availablePatterns
-            |> Array.filter (fun x -> displayPattern.StartsWith(x))
+let isValid initialPattern =
+    let cache = Dictionary()
 
-        match patternMatches with
-        | [||] -> 
-            false
+    let rec isValid' pattern =
+        match pattern with
+        | "" -> 1L
         | _ ->
-            patternMatches
-            |> Seq.tryFind (fun p ->
-                let newPattern = displayPattern.Substring(p.Length)
-                isValid (p :: path) availablePatterns newPattern
-            )
-            |> Option.isSome
+            match cache.TryGetValue(pattern) with
+            | true, v -> v
+            | _ ->
+                let mutable total = 0L
+                for i = 1 to pattern.Length do
+                    let s = pattern.Substring(0, i)
+                    if data.AvailablePatterns |> Array.exists ((=)s) then
+                        total <- total + isValid' (pattern.Substring(i))
+                cache[pattern] <- total
+                total
+
+    isValid' initialPattern
 
 data.DisplayPatterns
-|> Array.map (fun x -> printfn "Finding... %s" x; isValid [] data.AvailablePatterns x)
-|> Array.filter (not)
+|> Array.map (fun x -> printfn "Finding... %s" x; isValid x)
+|> Array.filter (fun x -> x > 0)
 |> Array.length
