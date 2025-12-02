@@ -100,7 +100,7 @@ let exampleInput = [
 ]
 
 // let lines = exampleInput
-let lines = System.IO.File.ReadLines(__SOURCE_DIRECTORY__ + "Day1.txt")
+let lines = System.IO.File.ReadLines(System.IO.Path.Combine(__SOURCE_DIRECTORY__, "Day1.txt"))
 
 let parseLine (line: string) =
     let direction = line[0]
@@ -134,14 +134,14 @@ let rotate2 position (direction: char, distance: int) =
         | _ -> failwith "Invalid direction"
 
     let mutable zeroCount = 0
-    let mutable p = position
+    let mutable newPosition = position
     for _ in 1 .. distance do
-        p <- p + delta
-        if p > 99 then zeroCount <- zeroCount + 1; p <- 0
-        elif p = 0 then zeroCount <- zeroCount + 1
-        elif p < 0 then p <- 99
+        newPosition <- newPosition + delta
+        if newPosition > 99 then zeroCount <- zeroCount + 1; newPosition <- 0
+        elif newPosition = 0 then zeroCount <- zeroCount + 1
+        elif newPosition < 0 then newPosition <- 99
 
-    zeroCount, p
+    zeroCount, newPosition
 
 let calc2() =
     let mutable pos = start
@@ -149,7 +149,6 @@ let calc2() =
     for dir, dist in parsedLines do
         let zeros, newPos = rotate2 pos (dir, dist)
         totalZeros <- totalZeros + zeros
-        printfn "%A%A oldPos = %d, newPos = %d, totalZeros: %d" dir dist pos newPos totalZeros
         pos <- newPos
     totalZeros
 
