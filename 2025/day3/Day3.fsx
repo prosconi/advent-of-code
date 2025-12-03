@@ -82,5 +82,5 @@ let rec getMaxJoltage2 lst size (line: string) =
 let part2 =
     lines
     |> Seq.map (getMaxJoltage2 [] 11)
-    |> Seq.map (fun lst -> lst |> Seq.map string |> String.concat "" |> int64)
+    |> Seq.map (Seq.map string >> String.concat "" >> int64)
     |> Seq.sum
