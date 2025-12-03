@@ -71,7 +71,7 @@ let part1 =
 
 // What is the new total output joltage?
 
-let rec getMaxJoltage2 (lst: list<_>) size (line: string) =
+let rec getMaxJoltage2 lst size (line: string) =
     let firstDigit = line.Substring(0, line.Length - size) |> Seq.map string |> Seq.map System.Int32.Parse |> Seq.max
     match size with
     | 0 -> firstDigit :: lst
