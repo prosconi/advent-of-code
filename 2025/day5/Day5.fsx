@@ -49,11 +49,11 @@ let exampleLines =
         "32"
     |]
 
-// let lines = System.IO.File.ReadAllLines(System.IO.Path.Combine(__SOURCE_DIRECTORY__, "Day5.txt"))
+let fileLines = System.IO.File.ReadAllLines(System.IO.Path.Combine(__SOURCE_DIRECTORY__, "Day5.txt"))
 
-let lines = exampleLines
+// let lines = exampleLines
 
-let emptyIndex = lines |> Array.findIndex (fun line -> line = "")
+let emptyIndex = fileLines |> Array.findIndex (fun line -> line = "")
 
 type Range = { Start: int64; End: int64 }
 
@@ -61,9 +61,12 @@ let parseRange (line: string) =
     let parts = line.Split('-')
     { Start = int64 parts[0]; End = int64 parts[1] }
 
-let ranges = lines[..emptyIndex - 1] |> Array.map parseRange
+let getRanges (lines: string[]) = 
+    lines
+    |> Array.filter (fun x -> x.Contains "-")
+    |> Array.map parseRange
 
-let ids = lines[emptyIndex + 1..]
+let ids = fileLines[emptyIndex + 1..]
 
 let isInRange ranges id =
     ranges
@@ -72,7 +75,7 @@ let isInRange ranges id =
 let part1 =
     ids
     |> Array.map int64
-    |> Array.filter (isInRange ranges)
+    |> Array.filter (isInRange (getRanges fileLines))
     |> Array.length
 
 // --- Part Two ---
@@ -114,44 +117,29 @@ let part1 =
 //   [   ]            r2
 //  [ ... ]           r1
 
-let ranges2 = ranges |> Array.sortBy (fun r -> r.End - r.Start)
-let mutable runningCount = 0L
-let processedRanges = System.Collections.Generic.List<Range>()
-for i = 0 to ranges2.Length - 1 do
-    let mutable r1 = ranges2[i]
-
-    // recalculate r1 based on overlaps with processedRanges
-    for r2 in processedRanges do
-        if i = 3 then
-            printf "Checking overlap between %A-%A and %A-%A" r1.Start r1.End r2.Start r2.End
-
-        if r1.Start >= r2.End then
-            printfn "... none"
-        elif r1.End <= r2.Start then
-            printfn "... none"
-        elif r1.Start >= r2.Start && r1.End <= r2.End then
-            // r1 is completely inside r2
-            printfn "... Discarding range %A-%A as it is inside %A-%A" r1.Start r1.End r2.Start r2.End
-            r1 <- { Start = 0L; End = 0L } // mark as discarded
-        elif r1.Start <= r2.Start && r1.End >= r2.End then
-            // r2 is completely inside r1
-            printfn "... Modifying range %A-%A to remove inside %A-%A" r1.Start r1.End r2.Start r2.End
-            let leftPart = { Start = r1.Start; End = r2.Start - 1L }
-            let rightPart = { Start = r2.End + 1L; End = r1.End }
-            processedRanges.Add leftPart
-            r1 <- rightPart
+let ranges = getRanges fileLines
+let mutable i1 = 0
+while i1 < ranges.Length do
+    let r1 = ranges[i1]
+    let mutable i2 = 0
+    while i2 < i1 do
+        let r2 = ranges[i2]
+        if r2.Start = 0L && r2.End = 0L then
+            i2 <- i2 + 1
+        elif r1.Start > r2.End then
+            i2 <- i2 + 1
+        elif r1.End < r2.Start then
+            i2 <- i2 + 1
         else
-            let overlapStart = (max r1.Start r2.End) + 1L
-            let overlapEnd = max r1.End r2.End
-            printfn "... Modifying range %A-%A with overlap %A-%A" r1.Start r1.End overlapStart overlapEnd
-            r1 <- { r1 with Start = overlapStart; End = overlapEnd }
-    
-    processedRanges.Add r1
+            let min = min r1.Start r2.Start
+            let max = max r1.End r2.End
+            ranges[i2] <- { Start = min; End = max }
+            ranges[i1] <- { Start = 0L; End = 0L } // mark as processed
+            i1 <- -1
+    i1 <- i1 + 1
 
-processedRanges
-|> Seq.map (fun x -> sprintf "%A-%A" x.Start x.End)
-|> Seq.toArray
 
 let part2 =
-    processedRanges
-    |> Seq.sumBy (fun r -> r.End - r.Start)
+    ranges
+    |> Seq.filter (fun r -> not (r.Start = 0L && r.End = 0L))
+    |> Seq.sumBy (fun r -> r.End - r.Start + 1L)
