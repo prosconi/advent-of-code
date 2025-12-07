@@ -138,7 +138,6 @@ while i1 < ranges.Length do
             i1 <- -1
     i1 <- i1 + 1
 
-
 let part2 =
     ranges
     |> Seq.filter (fun r -> not (r.Start = 0L && r.End = 0L))
