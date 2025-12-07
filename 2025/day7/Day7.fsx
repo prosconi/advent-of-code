@@ -279,6 +279,17 @@ let part1 = traverse exampleLines
 
 // Apply the many-worlds interpretation of quantum tachyon splitting to your manifold diagram. In total, how many different timelines would a single tachyon particle end up on?
 
+let memoize f =
+    let cache = System.Collections.Generic.Dictionary<_, _>()
+    let rec memoized x =
+        if cache.ContainsKey x then
+            cache[x]
+        else
+            let result = f memoized x
+            cache[x] <- result
+            result
+    memoized
+
 let traverse2 lines =
     let cache = System.Collections.Generic.Dictionary<_, _>()
     let width = lines |> Array.head |> String.length
@@ -286,7 +297,7 @@ let traverse2 lines =
     let start = findStart lines
     let getChar' = getChar (width, height) lines
 
-    let rec loop position =
+    let rec loop = memoize (fun loop position ->
         let nextPosition = down position
         match getChar' nextPosition with
         | Some('.') ->
@@ -294,25 +305,13 @@ let traverse2 lines =
         | Some('^') ->
             let leftPos = left nextPosition
             let rightPos = right nextPosition
-            let leftTimelines = 
-                if cache.ContainsKey leftPos then
-                    cache[leftPos]
-                else
-                    let leftTimelines = loop leftPos
-                    cache[leftPos] <- leftTimelines
-                    leftTimelines
-
-            let rightTimelines =
-                if cache.ContainsKey rightPos then
-                    cache[rightPos]
-                else
-                    let rightTimelines = loop rightPos
-                    cache[rightPos] <- rightTimelines
-                    rightTimelines
+            let leftTimelines = loop leftPos
+            let rightTimelines = loop rightPos
 
             leftTimelines + rightTimelines
         | Some other -> failwithf "Unexpected char %c at %A" other nextPosition
         | None -> 1L
+    )
 
     loop start
 
